@@ -1,0 +1,23 @@
+version: '3'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run serve
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - MODULE_NAME=app.main
+      - VARIABLE_NAME=app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
