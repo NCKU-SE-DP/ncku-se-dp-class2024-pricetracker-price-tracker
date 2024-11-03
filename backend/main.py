@@ -132,7 +132,7 @@ from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 
-def add_new(news_data):
+def add_news_article(news_data):
     """
     add new to db
     :param news_data: news info
@@ -151,12 +151,12 @@ def add_new(news_data):
     session.close()
 
 
-def get_new_info(search_term, is_initial=False):
+def fetch_news_articles_by_keyword(search_term, is_initial=False):
     """
-    get new
+    get new by keyword
 
-    :param search_term:
-    :param is_initial:
+    :param search_term: keyword
+    :param is_initial: bool indicate whether  this is the initial fetch
     :return:
     """
     all_news_data = []
@@ -187,17 +187,17 @@ def get_new_info(search_term, is_initial=False):
         all_news_data = response.json()["lists"]
     return all_news_data
 
-def get_new(is_initial=False):
+def get_new_info(is_initial=False):
     """
     get new info
 
     :param is_initial:
     :return:
     """
-    news_data = get_new_info("價格", is_initial=is_initial)
+    news_data = fetch_news_articles_by_keyword("價格", is_initial=is_initial)
     for news in news_data:
         title = news["title"]
-        GPTinfo = [
+        GPT_check_prompt = [
             {
                 "role": "system",
                 "content": "你是一個關聯度評估機器人，請評估新聞標題是否與「民生用品的價格變化」相關，並給予'high'、'medium'、'low'評價。(僅需回答'high'、'medium'、'low'三個詞之一)",
@@ -253,9 +253,9 @@ def start_scheduler():
     database = SessionLocal()
     if database.query(NewsArticle).count() == 0:
         # should change into simple factory pattern
-        get_new()
+        get_new_info()
     database.close()
-    Scheduler.add_job(get_new, "interval", minutes=100)
+    Scheduler.add_job(get_new_info, "interval", minutes=100)
     Scheduler.start()
 
 
@@ -423,7 +423,7 @@ async def search_news(request: PromptRequest):
     )
     keywords = completion.choices[0].message.content
     # should change into simple factory pattern
-    news_items = get_new_info(keywords, is_initial=False)
+    news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
         try:
             response = requests.get(news["titleLink"])
