@@ -197,18 +197,18 @@ def get_new_info(is_initial=False):
     news_data = fetch_news_articles_by_keyword("價格", is_initial=is_initial)
     for news in news_data:
         title = news["title"]
-        GPT_check_prompt = [
+        summary_prompt = [
             {
                 "role": "system",
                 "content": "你是一個關聯度評估機器人，請評估新聞標題是否與「民生用品的價格變化」相關，並給予'high'、'medium'、'low'評價。(僅需回答'high'、'medium'、'low'三個詞之一)",
             },
             {"role": "user", "content": f"{title}"},
         ]
-        ai = OpenAI(api_key="xxx").chat.completions.create(
+        summary_completion = OpenAI(api_key="xxx").chat.completions.create(
             model="gpt-3.5-turbo",
             messages=GPTinfo,
         )
-        relevance = ai.choices[0].message.content
+        relevance = summary_completion.choices[0].message.content
         if relevance == "high":
             response = requests.get(news["titleLink"])
             soup = BeautifulSoup(response.text, "html.parser")
@@ -245,7 +245,7 @@ def get_new_info(is_initial=False):
             result = json.loads(result)
             detailed_news["summary"] = result["影響"]
             detailed_news["reason"] = result["原因"]
-            add_new(detailed_news)
+            add_news_article(detailed_news)
 
 
 @app.on_event("startup")
@@ -282,10 +282,10 @@ def verify(password, hashed_password):
 
 
 def check_user_password_is_correct(database, name, pwd):
-    isPasswordCorrect = database.query(User).filter(User.username == name).first()
-    if not verify(pwd, isPasswordCorrect.hashed_password):
+    user = database.query(User).filter(User.username == name).first()
+    if not verify(pwd, user.hashed_password):
         return False
-    return isPasswordCorrect
+    return user
 
 
 def authenticate_user_token(
@@ -409,7 +409,7 @@ class PromptRequest(BaseModel):
 async def search_news(request: PromptRequest):
     prompt = request.prompt
     news_list = []
-    summary_prompt  = [
+    keyword_prompt  = [
         {
             "role": "system",
             "content": "你是一個關鍵字提取機器人，用戶將會輸入一段文字，表示其希望看見的新聞內容，請提取出用戶希望看見的關鍵字，請截取最重要的關鍵字即可，避免出現「新聞」、「資訊」等混淆搜尋引擎的字詞。(僅須回答關鍵字，若有多個關鍵字，請以空格分隔)",
@@ -419,7 +419,7 @@ async def search_news(request: PromptRequest):
 
     completion = OpenAI(api_key="xxx").chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=summary_prompt ,
+        messages=keyword_prompt ,
     )
     keywords = completion.choices[0].message.content
     # should change into simple factory pattern
