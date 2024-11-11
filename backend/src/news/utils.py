@@ -208,3 +208,18 @@ def news_exists(id2, db: Session):
     :rtype: bool
     """
     return db.query(NewsArticle).filter_by(id=id2).first() is not None
+
+def generate_ai_response(content, prompt):
+    message = [
+        {
+            "role": "system",
+            "content": prompt,
+        },
+        {"role": "user", "content": f"{content}"},
+    ]
+
+    completion = OpenAI(api_key="xxx").chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=message,
+    )
+    return completion.choices[0].message.content
