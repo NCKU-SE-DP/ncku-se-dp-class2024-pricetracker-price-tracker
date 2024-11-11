@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from bs4 import BeautifulSoup
 from src.models import user_news_association_table, NewsArticle
 from openai import OpenAI
+from src.auth.database import SessionLocal
 
 def store_news(news_data):
     """
@@ -15,7 +16,7 @@ def store_news(news_data):
     :type news_data: dict
     :return: None
     """
-    session = Session()
+    session = SessionLocal()
     session.add(NewsArticle(
         url=news_data["url"],
         title=news_data["title"],

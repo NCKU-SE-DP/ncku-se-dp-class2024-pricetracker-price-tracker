@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 from fastapi import Depends
 from jose import jwt
 from fastapi.security import OAuth2PasswordBearer
@@ -10,9 +10,10 @@ engine = create_engine("sqlite:///news_database.db", echo=True)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 Base.metadata.create_all(engine)
 
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def session_opener():
-    session = Session(bind=engine)
+    session = SessionLocal(bind=engine)
     try:
         yield session
     finally:

@@ -9,12 +9,12 @@ from src.models import NewsArticle, User, Base
 from src.auth.database import session_opener
 from src.news.schemas import NewsSumaryRequestSchema
 from src.auth.utils import pwd_context
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db" 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
@@ -110,7 +110,7 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["is_upvoted"] is False
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('main.OpenAI')
+    mock_openai_client = mocker.patch('src.news.utils.OpenAI')
 
     mock_message = Mock()
     mock_message.content = return_content
@@ -128,11 +128,11 @@ def mock_openai(mocker, return_content):
 def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
-    mock_get_new_info = mocker.patch("main.get_new_info", return_value=[
+    mock_get_new_info = mocker.patch("src.news.utils.get_new_info", return_value=[
         {"titleLink": "http://example.com/news1"}
     ])
 
-    mock_get = mocker.patch("main.requests.get", return_value=mocker.Mock(
+    mock_get = mocker.patch("src.news.utils.requests.get", return_value=mocker.Mock(
         text="""
         <html>
         <h1 class="article-content__title">Test Title</h1>

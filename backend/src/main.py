@@ -1,12 +1,12 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import sessionmaker
 from fastapi import FastAPI
 import sentry_sdk
 
 from src.models import NewsArticle
 from src.auth.database import engine
 from .news.utils import get_new
+from .auth.database import SessionLocal
 from .config import SentryConfig, AppConfig
 
 from .news.router import router as news_router
@@ -21,7 +21,6 @@ sentry_sdk.init(
 
 app = FastAPI()
 bgs = BackgroundScheduler()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 app.add_middleware(
     CORSMiddleware,  # noqa
