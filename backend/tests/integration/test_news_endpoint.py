@@ -9,8 +9,7 @@ from src.models import NewsArticle, User, Base
 from src.auth.database import session_opener
 from src.news.schemas import NewsSumaryRequestSchema
 from src.auth.utils import pwd_context
-from unittest.mock import Mock, patch
-
+from unittest.mock import Mock
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
