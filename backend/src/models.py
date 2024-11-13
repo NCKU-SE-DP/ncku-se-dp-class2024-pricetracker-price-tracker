@@ -1,8 +1,6 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, Table, Text
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
-Base = declarative_base()
+from .database import Base
 
 user_news_association_table = Table(
     "user_news_upvotes",

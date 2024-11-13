@@ -1,31 +1,29 @@
-import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import sentry_sdk
 from apscheduler.schedulers.background import BackgroundScheduler
+from .config import settings
+from .database import engine, Base, SessionLocal
+from .models import NewsArticle
+from .services.auth.routes import router as auth_router
+from .services.news.routes import router as news_router
+from .services.prices.routes import router as prices_router
+from .services.news import news
 
-from src.config import settings
-from src.models import Base, NewsArticle
-from src.database import engine, SessionLocal
-from src.auth import auth
-from src.news import news
-from src.services import NewsService
-from src.prices import prices
-
-# 初始化資料庫
+# Initialize database
 Base.metadata.create_all(bind=engine)
 
-# 初始化 Sentry
+# Initialize Sentry
 sentry_sdk.init(
     dsn=settings.SENTRY_DSN,
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
 )
 
-# 初始化 FastAPI
 app = FastAPI()
-bgs = BackgroundScheduler()
+scheduler = BackgroundScheduler()
 
-# 設定 CORS
+# Setup CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -34,21 +32,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 註冊路由
-app.include_router(auth.router)
-app.include_router(news.router)
-app.include_router(prices.router)
+# Register routers
+app.include_router(auth_router, prefix="/api/v1/users", tags=["users"])
+app.include_router(news_router, prefix="/api/v1/news", tags=["news"])
+app.include_router(prices_router, prefix="/api/v1/prices", tags=["prices"])
 
-# Startup & Shutdown Events
 @app.on_event("startup")
-async def start_scheduler():
+async def startup_event():
+    # Initialize news database if empty
     db = SessionLocal()
     if db.query(NewsArticle).count() == 0:
-        await NewsService.get_news_info("價格", is_initial=True)
+        await news.get_new(db)
     db.close()
-    bgs.add_job(NewsService.get_news_info, "interval", minutes=100, args=["價格"])
-    bgs.start()
+    
+    # Start scheduler
+    scheduler.add_job(news.get_new, "interval", minutes=100)
+    scheduler.start()
 
 @app.on_event("shutdown")
-def shutdown_scheduler():
-    bgs.shutdown()
+def shutdown_event():
+    scheduler.shutdown() 
