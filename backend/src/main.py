@@ -5,10 +5,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from .config import settings
 from .database import engine, Base, SessionLocal
 from .models import NewsArticle
-from .services.auth.routes import router as auth_router
-from .services.news.routes import router as news_router
-from .services.prices.routes import router as prices_router
-from .services.news import news
+from auth import routes as auth_router
+from news import routes as news_router
+from prices import routes as prices_router
+from news import news
 
 # Initialize database
 Base.metadata.create_all(bind=engine)
