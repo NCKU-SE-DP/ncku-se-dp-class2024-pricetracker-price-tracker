@@ -7,8 +7,6 @@ class UserAuthSchema(BaseModel):
     username: str
     password: str
 
-    class Config:
-        orm_mode = True
 
 
 class PromptRequest(BaseModel):

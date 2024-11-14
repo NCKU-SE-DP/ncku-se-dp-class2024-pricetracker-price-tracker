@@ -9,10 +9,11 @@ from .config import (
     DEFAULT_SCHEDULER_INTERVAL_MINUTES, 
     CORS_ALLOW_ORIGINS
 )
-from .database import Base, engine, get_db
+from .database import Base, engine, get_db, SessionLocal
 from .routers import authenticate, news, price
 from .service import fetch_and_store_news
 from sqlalchemy.orm import Session
+from .models import NewsArticle
 
 # 初始化 Sentry，用於錯誤追蹤和性能監控
 sentry_sdk.init(
@@ -49,9 +50,12 @@ background_scheduler.add_job(scheduled_fetch_and_store_news, "interval", minutes
 
 @app.on_event("startup")
 def start_scheduler():
-    """
-    應用啟動時啟動背景排程器
-    """
+    db = SessionLocal()
+    if db.query(NewsArticle).count() == 0:
+        # should change into simple factory pattern
+        fetch_and_store_news()
+    db.close()
+    background_scheduler.add_job(fetch_and_store_news, "interval", minutes=DEFAULT_SCHEDULER_INTERVAL_MINUTES)
     background_scheduler.start()
 
 @app.on_event("shutdown")

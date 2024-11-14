@@ -1,5 +1,4 @@
 import os
-
 # 資料庫連接 URL
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///news_database.db")
 
@@ -21,3 +20,4 @@ DEFAULT_SCHEDULER_INTERVAL_MINUTES = int(os.getenv("DEFAULT_SCHEDULER_INTERVAL_M
 
 # CORS 配置
 CORS_ALLOW_ORIGINS = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:8080").split(",")
+INITIAL_FETCH_PAGE_RANGE = range(1, 10)
