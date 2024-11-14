@@ -9,3 +9,6 @@ backend/orig_main.py
 backend/PULL_REQUEST.md
 backend/pyvenv.cfg
 /.venv
+backend/.coverage
+backend/coverage.xml
+backend/coverage.xml
