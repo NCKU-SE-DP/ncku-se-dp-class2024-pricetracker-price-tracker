@@ -2,16 +2,17 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker
-from main import app
-from main import Base, User, session_opener
+from src.main import app
+from src.models import User, Base
+from src.auth.database import session_opener
 from jose import jwt
-from main import pwd_context
+from src.auth.utils import pwd_context
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
 # SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
+SQLALCHEMY_DATABASE_URL = "sqlite:///test.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
