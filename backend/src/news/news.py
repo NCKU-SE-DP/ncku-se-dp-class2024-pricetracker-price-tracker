@@ -1,95 +1,108 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List
-import itertools
-import requests
 from bs4 import BeautifulSoup
+import requests
+from urllib.parse import quote
+from openai import OpenAI
+import json
+import itertools
+from sqlalchemy import delete, insert, select
+from sqlalchemy.orm import Session
+from ...models import NewsArticle, user_news_association_table
+from ...config import settings
 
-from .dependencies import get_db, get_current_user
-from .models import User, NewsArticle
-from .services import NewsService, AIService
-from .schemas import (
-    NewsResponse,
-    NewsSearchResponse,
-    NewsSumaryRequestSchema,
-    NewsSummaryResponse,
-    PromptRequest,
-    UpvoteResponse
-)
+_id_counter = itertools.count(start=1000000)
 
-router = APIRouter(
-    prefix="/api/v1/news",
-    tags=["News"]
-)
-
-@router.get("/news", response_model=List[NewsResponse])
-async def read_news(db: Session = Depends(get_db)):
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    for n in news:
-        upvotes, upvoted = await NewsService.get_article_upvote_details(n.id, None, db)
-        result.append({**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted})
-    return result
-
-@router.get("/user_news", response_model=List[NewsResponse])
-async def read_user_news(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    for article in news:
-        upvotes, upvoted = await NewsService.get_article_upvote_details(article.id, current_user.id, db)
-        result.append({**article.__dict__, "upvotes": upvotes, "is_upvoted": upvoted})
-    return result
-
-@router.post("/search_news", response_model=List[NewsSearchResponse])
-async def search_news(request: PromptRequest):
-    keywords = await AIService.extract_search_keywords(request.prompt)
-    news_items = await NewsService.get_news_info(keywords, is_initial=False)
-    news_list = []
-    _id_counter = itertools.count(start=1000000)
-    
-    for news in news_items:
-        try:
-            response = requests.get(news["titleLink"])
-            soup = BeautifulSoup(response.text, "html.parser")
-            title = soup.find("h1", class_="article-content__title").text
-            time = soup.find("time", class_="article-content__time").text
-            content_section = soup.find("section", class_="article-content__editor")
-            paragraphs = [
-                p.text
-                for p in content_section.find_all("p")
-                if p.text.strip() != "" and "▪" not in p.text
-            ]
-            detailed_news = {
-                "url": news["titleLink"],
-                "title": title,
-                "time": time,
-                "content": " ".join(paragraphs),
-                "id": next(_id_counter)
+def get_new_info(search_term: str, is_initial: bool = False):
+    all_news_data = []
+    if is_initial:
+        for p in range(1, 10):
+            params = {
+                "page": p,
+                "id": f"search:{quote(search_term)}",
+                "channelId": 2,
+                "type": "searchword",
             }
-            news_list.append(detailed_news)
-        except Exception as e:
-            print(e)
-    return sorted(news_list, key=lambda x: x["time"], reverse=True)
+            response = requests.get("https://udn.com/api/more", params=params)
+            all_news_data.extend(response.json()["lists"])
+    else:
+        params = {
+            "page": 1,
+            "id": f"search:{quote(search_term)}",
+            "channelId": 2,
+            "type": "searchword",
+        }
+        response = requests.get("https://udn.com/api/more", params=params)
+        all_news_data = response.json()["lists"]
+    return all_news_data
 
-@router.post("/news_summary", response_model=NewsSummaryResponse)
-async def news_summary(
-    payload: NewsSumaryRequestSchema,
-    current_user: User = Depends(get_current_user)
-):
-    result = await AIService.generate_summary(payload.content)
-    return {
-        "summary": result["影響"],
-        "reason": result["原因"]
-    }
+def process_news_content(url: str):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    title = soup.find("h1", class_="article-content__title").text
+    time = soup.find("time", class_="article-content__time").text
+    content_section = soup.find("section", class_="article-content__editor")
+    paragraphs = [
+        p.text
+        for p in content_section.find_all("p")
+        if p.text.strip() != "" and "▪" not in p.text
+    ]
+    return title, time, paragraphs
 
-@router.post("/{id}/upvote", response_model=UpvoteResponse)
-async def upvote_article(
-    id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    message = await NewsService.toggle_upvote(id, current_user.id, db)
-    return {"message": message}
+def generate_ai_response(content: str, system_prompt: str):
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": content},
+    ]
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+    )
+    return completion.choices[0].message.content
+
+def add_new_article(news_data: dict, db: Session):
+    article = NewsArticle(
+        url=news_data["url"],
+        title=news_data["title"],
+        time=news_data["time"],
+        content=" ".join(news_data["content"]),
+        summary=news_data["summary"],
+        reason=news_data["reason"],
+    )
+    db.add(article)
+    db.commit()
+    return article
+
+def get_article_upvote_details(article_id: int, user_id: int, db: Session):
+    count = db.query(user_news_association_table).filter_by(news_articles_id=article_id).count()
+    voted = False
+    if user_id:
+        voted = (
+            db.query(user_news_association_table)
+            .filter_by(news_articles_id=article_id, user_id=user_id)
+            .first() is not None
+        )
+    return count, voted
+
+def toggle_upvote(article_id: int, user_id: int, db: Session):
+    existing_upvote = db.execute(
+        select(user_news_association_table).where(
+            user_news_association_table.c.news_articles_id == article_id,
+            user_news_association_table.c.user_id == user_id,
+        )
+    ).scalar()
+
+    if existing_upvote:
+        delete_stmt = delete(user_news_association_table).where(
+            user_news_association_table.c.news_articles_id == article_id,
+            user_news_association_table.c.user_id == user_id,
+        )
+        db.execute(delete_stmt)
+        db.commit()
+        return "Upvote removed"
+    else:
+        insert_stmt = insert(user_news_association_table).values(
+            news_articles_id=article_id, user_id=user_id
+        )
+        db.execute(insert_stmt)
+        db.commit()
+        return "Article upvoted" 
