@@ -64,9 +64,6 @@ def read_user_news(
         )
     return result
 
-
-
-
 @router.post(path='/search_news')
 async def search_news(request: PromptRequest):
     prompt = request.prompt
