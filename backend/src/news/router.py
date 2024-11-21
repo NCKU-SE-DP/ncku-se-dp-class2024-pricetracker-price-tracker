@@ -106,7 +106,6 @@ async def search_news(request: PromptRequest):
             extracted_news_list.append(detailed_news_info)
         except Exception as error:
             print(error)
-    
     return sorted(extracted_news_list, key=lambda x: x["time"], reverse=True)
 
 @router.post("/news_summary")

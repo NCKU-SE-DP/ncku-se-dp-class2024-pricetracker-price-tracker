@@ -29,7 +29,7 @@ def add_news_article_to_db(news_article_data):
     session.commit()
     session.close()
 
-def fetch_news_articles(search_keyword, fetch_multiple_pages=False):
+def fetch_news_articles(search_keyword: str, is_initial=False) -> list:
     """
     根據搜尋詞獲取新聞文章
     :param search_keyword: 用來搜尋新聞的關鍵字
@@ -37,7 +37,7 @@ def fetch_news_articles(search_keyword, fetch_multiple_pages=False):
     :return: 包含新聞資料的列表
     """
     all_news_articles = []
-    if fetch_multiple_pages:
+    if is_initial:
         page_results = []
         for page_num in range(1, 10):
             request_params = {
@@ -49,7 +49,7 @@ def fetch_news_articles(search_keyword, fetch_multiple_pages=False):
             response = requests.get("https://udn.com/api/more", params=request_params)
             page_results.append(response.json()["lists"])
         for page_data in page_results:
-            all_news_articles.extend(page_data)
+            all_news_articles.append(page_data)
     else:
         request_params = {
             "page": 1,
@@ -67,7 +67,7 @@ def process_and_store_relevant_news(fetch_multiple_pages=False):
     :param fetch_multiple_pages: 是否需要抓取多頁的新聞
     :return:
     """
-    news_articles = fetch_news_articles("價格", fetch_multiple_pages=fetch_multiple_pages)
+    news_articles = fetch_news_articles("價格", is_initial=fetch_multiple_pages)
     for article in news_articles:
         article_title = article["title"]
         relevance_assessment_prompt = [

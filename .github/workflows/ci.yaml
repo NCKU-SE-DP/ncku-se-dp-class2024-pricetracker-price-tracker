@@ -4,22 +4,33 @@ on:
   push:
     branches:
       - 'main'
+      - 'develop'
+      - 'fix/integration-test'
   pull_request:
     branches:
       - 'main'
-
+      - 'develop'
+      
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [F74134710]
 
     steps:
+      - name: Clear and Set Permissions for Temp Folder
+        run: |
+          Remove-Item -Recurse -Force "${{ runner.temp }}\*"
+          icacls "${{ runner.temp }}" /grant Everyone:F /T
+        shell: powershell
+      
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.10"
+          cache-dependency-path: |
+            backend/requirements.txt
 
       - name: Install dependencies
         run: |
@@ -36,7 +47,10 @@ jobs:
 
       - name: Run integration tests (with mock DB)
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPEN_AI_API_KEY: ${{ secrets.OPEN_AI_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          USER_ACCESS_TOKEN_SECRET_KEY: ${{ secrets.USER_ACCESS_TOKEN_SECRET_KEY }}
         run: |
           cd backend
           pytest tests/integration --cov=src --cov-report=xml --disable-warnings
