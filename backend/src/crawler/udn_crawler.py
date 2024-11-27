@@ -35,10 +35,10 @@ UDNCrawler Methods:
 from requests import Response
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
-
-from .base import NewsCrawlerBase, Headline, News, NewsWithSummary
-
-
+import requests
+from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
+from urllib.parse import quote
+from src.news.models import NewsArticle
 class UDNCrawler(NewsCrawlerBase):
     CHANNEL_ID = 2
 
@@ -66,31 +66,83 @@ class UDNCrawler(NewsCrawlerBase):
         # If 'page' is a tuple, unpack it and create a range representing those pages (inclusive).
         # If 'page' is an int, create a list containing only that single page number.
         # page_range = range(*page) if isinstance(page, tuple) else [page]
-        ...
+        page_range = range(page[0],page[1]+1) if isinstance(page, tuple) else [page]
+        headlines=[]
+        for page in page_range:
+            headlines.extend(self._fetch_news(page=page,search_term=search_term))
+        return headlines
 
     def _fetch_news(self, page: int, search_term: str) -> list[Headline]:
-        ...
+        params=self._create_search_params(page=page,search_term=search_term)
+        response=self._perform_request(params=params)
+        return self._parse_headlines(response)
 
     def _create_search_params(self, page: int, search_term: str) -> dict:
-        ...
+        return {
+            "page":page,
+            "id": f"search:{quote(search_term)}",
+            "channelId":self.CHANNEL_ID,
+            "type":"searchword"
+        }
 
     def _perform_request(self, url: str | None = None, params: dict | None = None) -> Response:
-        ...
+        return requests.get(url,params=params)
 
     @staticmethod
     def _parse_headlines(response: Response) -> list[Headline]:
-        ...
+        data =response.json()
+        processed_items = [{
+            "title":item["title"],
+            "url":item["titleLink"]
+        } for item in data["lists"]]
+        return [Headline(**item) for item in processed_items]
 
     def parse(self, url: str) -> News:
-        ...
-
+        response=self._perform_request(url=url)
+        soup=BeautifulSoup(response.text,"html.parser")
+        return self._extract_news(soup,url)
     @staticmethod
     def _extract_news(soup: BeautifulSoup, url: str) -> News:
-        ...
+        title=soup.find("h1",class_="article-content__title").text
+        time=soup.find("time",class_="article-content__time").text
+        content_section = soup.find("section", class_="article-content__editor")
+        paragraphs = [
+            p.text
+            for p in content_section.find_all("p")
+            if p.text.strip() != "" and "▪" not in p.text
+        ]
+        content = " ".join(paragraphs)
 
+        return News(
+            title=title,
+            url=url,
+            time=time,
+            content=content
+        )
     def save(self, news: NewsWithSummary, db: Session):
-        ...
+        existing_news = db.query(NewsArticle).filter_by(url=news.url).first()
+        if existing_news:
+            print(f"News with URL {news.url} already exists. Skipping save.")
+            return
+
+        new_article = NewsArticle(
+            url=news.url,
+            title=news.title,
+            time=news.time,
+            content=news.content,
+            summary=news.summary,
+            reason=news.reason,
+        )
+
+        db.add(new_article)
+        self._commit_changes(db)
+        return
 
     @staticmethod
     def _commit_changes(db: Session):
-        ...
+        try:
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise RuntimeError(f"Failed to save news to database: {e}")
+        db.close()
