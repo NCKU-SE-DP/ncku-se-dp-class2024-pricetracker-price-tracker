@@ -10,7 +10,10 @@ import itertools
 from ..models import user_news_association_table
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
+from src.news.config import get_NewsSettings
+NewsSettings=get_NewsSettings()
 article_id_counter = itertools.count(start=1000000)
+openai_client = OpenAI(api_key=NewsSettings.Openai_APIKEY)
 def add_news_article(news_data):
     """
     add new to db
@@ -80,7 +83,7 @@ def get_new_info(is_initial=False):
             },
             {"role": "user", "content": f"{title}"},
         ]
-        summary_completion = OpenAI(api_key="xxx").chat.completions.create(
+        summary_completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=summary_prompt,
         )
@@ -113,7 +116,7 @@ def get_new_info(is_initial=False):
                 {"role": "user", "content": " ".join(detailed_news["content"])},
             ]
 
-            completion = OpenAI(api_key="xxx").chat.completions.create(
+            completion = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=GPTinfo,
             )

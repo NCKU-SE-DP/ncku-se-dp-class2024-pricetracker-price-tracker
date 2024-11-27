@@ -4,15 +4,24 @@ on:
   push:
     branches:
       - 'main'
+      - 'develop'
+      - 'fix/integration-test' # 新增這一行
   pull_request:
     branches:
       - 'main'
+      - 'develop'
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [F74134736]
 
     steps:
+      - name: Clear and Set Permissions for Temp Folder
+        run: |
+          Remove-Item -Recurse -Force "${{ runner.temp }}\*"
+          icacls "${{ runner.temp }}" /grant Everyone:F /T
+        shell: powershell
+
       - name: Checkout code
         uses: actions/checkout@v3
 
