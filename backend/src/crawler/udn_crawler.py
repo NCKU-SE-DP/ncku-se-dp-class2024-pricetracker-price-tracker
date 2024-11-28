@@ -128,3 +128,5 @@ class UDNCrawler(NewsCrawlerBase):
         except Exception as e:
             db.rollback()
             raise RuntimeError(f"Failed to commit changes to the database: {e}")
+        
+## Unit Test
