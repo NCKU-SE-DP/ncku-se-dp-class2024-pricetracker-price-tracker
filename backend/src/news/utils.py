@@ -1,12 +1,12 @@
-from urllib.parse import quote
-import requests
 import json
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
-from bs4 import BeautifulSoup
 from src.models import user_news_association_table, NewsArticle
 from openai import OpenAI
 from src.auth.database import SessionLocal
+from src.crawler.udn_crawler import UDNCrawler
+
+crawler = UDNCrawler()
 
 def store_news(news_data):
     """
@@ -16,17 +16,7 @@ def store_news(news_data):
     :type news_data: dict
     :return: None
     """
-    session = SessionLocal()
-    session.add(NewsArticle(
-        url=news_data["url"],
-        title=news_data["title"],
-        time=news_data["time"],
-        content=" ".join(news_data["content"]),  # 將內容list轉換為字串
-        summary=news_data["summary"],
-        reason=news_data["reason"],
-    ))
-    session.commit()
-    session.close()
+    crawler.save(news_data)
     
 def get_new_info(search_term, fetch_all_pages=False):
     """
@@ -39,33 +29,13 @@ def get_new_info(search_term, fetch_all_pages=False):
     :return: List of dictionaries containing news information.
     :rtype: list
     """
-    news_data = []
-    # iterate pages to get more news data, not actually get all news data
+    
+
     if fetch_all_pages:
-        data_pages = []
-        for page_number in range(1, 10):
-            paged_params = {
-                "page": page_number,
-                "id": f"search:{quote(search_term)}",
-                "channelId": 2,
-                "type": "searchword",
-            }
-            response = requests.get("https://udn.com/api/more", params=paged_params)
-            data_pages.append(response.json()["lists"])
-
-        for page in data_pages:
-            news_data.extend(page)
+        all_news_data = crawler.startup(search_term=search_term)
     else:
-        params = {
-            "page": 1,
-            "id": f"search:{quote(search_term)}",
-            "channelId": 2,
-            "type": "searchword",
-        }
-        response = requests.get("https://udn.com/api/more", params=params)
-
-        news_data = response.json()["lists"]
-    return news_data
+        all_news_data = crawler.get_headline(search_term,page=1)
+    return all_news_data
 
 
 def toggle_upvote(n_id, u_id, db):
@@ -131,25 +101,10 @@ def get_new(fetch_all_pages=False):
         relevance = ai_response.choices[0].message.content
 
         if relevance == "high":
-            response = requests.get(news["titleLink"])
-            soup = BeautifulSoup(response.text, "html.parser")
-            # 標題
-            news_title = soup.find("h1", class_="article-content__title").text
-            news_time = soup.find("time", class_="article-content__time").text
-            # 定位到包含文章内容的 <section>
-            content_section = soup.find("section", class_="article-content__editor")
+            
+            detailed_news = crawler.validate_and_parse(news["titleLink"])
 
-            paragraphs = [
-                paragraphs.text
-                for paragraph in content_section.find_all("p")
-                if paragraph.text.strip() != "" and "▪" not in paragraph.text
-            ]
-            detailed_news =  {
-                "url": news["titleLink"],
-                "title": news_title,
-                "time": news_time,
-                "content": paragraphs,
-            }
+            
             summary_messages = [
                 {
                     "role": "system",
