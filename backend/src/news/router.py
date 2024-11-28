@@ -7,8 +7,7 @@ from ..auth.service import authenticate_user_token
 from ..database import session_opener
 from .models import NewsArticle
 from .schemas import PromptRequest, NewsSumaryRequestSchema
-from .service import article_id_counter, fetch_news_articles, get_article_upvote_details, toggle_article_upvote
-
+from .service import article_id_counter, fetch_news_articles, get_article_upvote_details, toggle_article_upvote, process_news_item, parse_summary_result, convert_news_to_dict
 router = APIRouter(
     prefix="/news",
     tags=["news"],
@@ -83,25 +82,28 @@ async def search_news(request: PromptRequest):
     
     # 根據提取的關鍵字獲取新聞文章
     relevant_news_items = fetch_news_articles(extracted_keywords, is_initial=False)
+    print(relevant_news_items)
+    print("#############")
     for news_item in relevant_news_items:
         try:
-            news_response = requests.get(news_item["titleLink"])
-            news_soup = BeautifulSoup(news_response.text, "html.parser")
-            news_title = news_soup.find("h1", class_="article-content__title").text
-            news_time = news_soup.find("time", class_="article-content__time").text
-            news_content_section = news_soup.find("section", class_="article-content__editor")
-            content_paragraphs = [
-                paragraph.text
-                for paragraph in news_content_section.find_all("p")
-                if paragraph.text.strip() != "" and "▪" not in paragraph.text
-            ]
-            detailed_news_info = {
-                "url": news_item["titleLink"],
-                "title": news_title,
-                "time": news_time,
-                "content": content_paragraphs,
-            }
-            detailed_news_info["content"] = " ".join(detailed_news_info["content"])
+            # news_response = requests.get(news_item["titleLink"])
+            # news_soup = BeautifulSoup(news_response.text, "html.parser")
+            # news_title = news_soup.find("h1", class_="article-content__title").text
+            # news_time = news_soup.find("time", class_="article-content__time").text
+            # news_content_section = news_soup.find("section", class_="article-content__editor")
+            # content_paragraphs = [
+            #     paragraph.text
+            #     for paragraph in news_content_section.find_all("p")
+            #     if paragraph.text.strip() != "" and "▪" not in paragraph.text
+            # ]
+            # detailed_news_info = {
+            #     "url": news_item["titleLink"],
+            #     "title": news_title,
+            #     "time": news_time,
+            #     "content": content_paragraphs,
+            # }
+            # detailed_news_info["content"] = " ".join(detailed_news_info["content"])
+            detailed_news_info = convert_news_to_dict(process_news_item(news_item))
             detailed_news_info["id"] = next(article_id_counter)
             extracted_news_list.append(detailed_news_info)
         except Exception as error:

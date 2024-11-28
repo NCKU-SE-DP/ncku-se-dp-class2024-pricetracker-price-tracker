@@ -1,15 +1,39 @@
 import itertools
 import requests
-from urllib.parse import quote
+# from urllib.parse import quote
 import json
 from bs4 import BeautifulSoup
 from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy import select, insert, delete
 from ..database import Session
-from .models import NewsArticle
 from ..auth.models import user_news_association_table
+from ..crawler.udn_crawler import UDNCrawler
+from ..crawler.crawler_base import NewsWithSummary
 
+crawler = UDNCrawler()
+
+def parse_summary_result():
+    response_data = {}
+    if result:
+        try:
+            result = json.loads(result)
+            response_data["summary"] = result["影響"]
+            response_data["reason"] = result["原因"]
+        except json.JSONDecodeError:
+            return response_data
+    return response_data
+    
+def process_news_item(news):
+    return crawler.validate_and_parse(news.url)
+
+def convert_news_to_dict(news):
+    return {
+        "url": news.url,
+        "title": news.title,
+        "time": news.time,
+        "content": news.content,
+    }
 article_id_counter = itertools.count(start=1000000)
 def add_news_article_to_db(news_article_data):
     """
@@ -18,16 +42,10 @@ def add_news_article_to_db(news_article_data):
     :return:
     """
     session = Session()
-    session.add(NewsArticle(
-        url=news_article_data["url"],
-        title=news_article_data["title"],
-        published_time=news_article_data["time"],
-        content=" ".join(news_article_data["content"]),  # 將內容列表轉換為字串
-        summary=news_article_data["summary"],
-        reason_for_inclusion=news_article_data["reason"],
-    ))
-    session.commit()
-    session.close()
+    crawler.save(
+        news=NewsWithSummary(summary=news_article_data["summary"], reason=news_article_data["reason"]),
+        db=session
+    )
 
 def fetch_news_articles(search_keyword: str, is_initial=False) -> list:
     """
@@ -36,30 +54,11 @@ def fetch_news_articles(search_keyword: str, is_initial=False) -> list:
     :param fetch_multiple_pages: 是否獲取多個頁面的新聞資料
     :return: 包含新聞資料的列表
     """
-    all_news_articles = []
+    
     if is_initial:
-        page_results = []
-        for page_num in range(1, 10):
-            request_params = {
-                "page": page_num,
-                "id": f"search:{quote(search_keyword)}",
-                "channelId": 2,
-                "type": "searchword",
-            }
-            response = requests.get("https://udn.com/api/more", params=request_params)
-            page_results.append(response.json()["lists"])
-        for page_data in page_results:
-            all_news_articles.append(page_data)
+        return crawler.startup(search_keyword)
     else:
-        request_params = {
-            "page": 1,
-            "id": f"search:{quote(search_keyword)}",
-            "channelId": 2,
-            "type": "searchword",
-        }
-        response = requests.get("https://udn.com/api/more", params=request_params)
-        all_news_articles = response.json()["lists"]
-    return all_news_articles
+        return crawler.get_headline(search_keyword, 1)
 
 def process_and_store_relevant_news(fetch_multiple_pages=False):
     """
