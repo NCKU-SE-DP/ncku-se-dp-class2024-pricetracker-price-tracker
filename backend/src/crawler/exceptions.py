@@ -1,6 +1,6 @@
 class DomainMismatchException(Exception):
     """Exception raised for URLs whose domain does not match the news website's domain."""
-
+    
     def __init__(
         self,
         url: str,

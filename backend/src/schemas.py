@@ -1,13 +1,18 @@
 from pydantic import BaseModel
-
+from typing import Optional
 class UserAuthSchema(BaseModel):
     """
     用於用戶註冊和登入的數據模式
     """
     username: str
     password: str
+    password: Optional[str] = None
 
-
+class UserProf(BaseModel):
+    id: int
+    username: str
+    class Config:
+        orm_mode = True
 
 class PromptRequest(BaseModel):
     """

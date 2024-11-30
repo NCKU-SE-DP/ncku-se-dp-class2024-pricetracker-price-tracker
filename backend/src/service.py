@@ -208,4 +208,3 @@ def get_all_news_articles(db=Depends(get_db)):
     return formatted_articles
 def news_exists(id2, db: Session):
     return db.query(NewsArticle).filter_by(id=id2).first() is not None
-

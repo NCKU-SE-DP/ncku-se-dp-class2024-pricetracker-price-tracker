@@ -9,10 +9,10 @@ from passlib.context import CryptContext
 from ..dependence import authenticate_user_token
 from datetime import timedelta
 
-router = APIRouter(prefix="/api/v1/users")
+router = APIRouter()
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-@router.post("/register")
+@router.post("/api/v1/users/register")
 def register_user(user: UserAuthSchema, db: Session = Depends(get_db)):
     """create user"""
     hashed_password = password_context.hash(user.password)
@@ -22,7 +22,7 @@ def register_user(user: UserAuthSchema, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
-@router.post("/login")
+@router.post("/api/v1/users/login")
 async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
@@ -36,13 +36,6 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/me", response_model=UserAuthSchema)
-def get_logged_in_user(current_user: User = Depends(authenticate_user_token)):
-    """
-    獲取當前已登入的用戶資訊
-    """
-    return {"username": current_user.username, "password": current_user.hashed_password}
-
-@router.put("/me", response_model=UserAuthSchema)
+@router.get("/api/v1/users/me", response_model=UserAuthSchema)
 def read_users_me(user=Depends(authenticate_user_token)):
-    return {"username": user.username}
+    return {"username": user.username, "id": user.id}

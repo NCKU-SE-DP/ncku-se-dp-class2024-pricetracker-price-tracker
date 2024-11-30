@@ -78,7 +78,6 @@ def test_login_for_access_token(test_user):
     assert "access_token" in data
     assert data["token_type"] == "bearer"
 
-
 def test_read_users_me(test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
     response = client.get("/api/v1/users/me", headers=headers)

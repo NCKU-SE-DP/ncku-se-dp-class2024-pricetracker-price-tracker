@@ -14,10 +14,9 @@ from ..service import add_news_to_db, get_news_article_upvote_details
 from ..dependence import authenticate_user_token
 from ..service import toggle_news_article_upvote, fetch_news_info
 
-router = APIRouter(
-    prefix="/api/v1/news"
-)  
-@router.post("/{id}/upvote")
+router = APIRouter()  
+
+@router.post("/api/v1/news/{id}/upvote")
 def handle_news_article_upvote(
         id,
         db=Depends(get_db),
@@ -26,7 +25,7 @@ def handle_news_article_upvote(
     message = toggle_news_article_upvote(id, current_user.id, db)
     return {"message": message}
 
-@router.get("/user_news")
+@router.get("/api/v1/news/user_news")
 def get_user_specific_news(
         db=Depends(get_db),
         u=Depends(authenticate_user_token)
@@ -44,7 +43,7 @@ def get_user_specific_news(
         )
     return result
 
-@router.get("/news")
+@router.get("/api/v1/news/news")
 def get_user_specific_news(
     db: Session = Depends(get_db)
 ):
@@ -64,7 +63,7 @@ def get_user_specific_news(
         )
     return user_specific_articles
 
-@router.post("/news_summary")
+@router.post("/api/v1/news/news_summary")
 async def news_summary(
     payload: NewsSummaryRequestSchema, current_user: User = Depends(authenticate_user_token)
 ):
@@ -93,7 +92,7 @@ async def news_summary(
 
 _id_counter = itertools.count(start=1000000)
 
-@router.post("/search_news")
+@router.post("/api/v1/news/search_news")
 async def search_news(request: PromptRequest):
     """
     提取關鍵字並獲取新聞資料

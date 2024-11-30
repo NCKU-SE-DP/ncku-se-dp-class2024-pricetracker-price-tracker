@@ -1,12 +1,9 @@
 from fastapi import APIRouter, Query
 import requests
 
-router = APIRouter(
-    prefix="/api/v1/prices",
-    tags=["Prices"]
-)
+router = APIRouter()
 
-@router.get("/necessities-price")
+@router.get("/api/v1/prices/necessities-price")
 async def get_necessities_prices(
     category: str = Query(None), 
     commodity: str = Query(None)
