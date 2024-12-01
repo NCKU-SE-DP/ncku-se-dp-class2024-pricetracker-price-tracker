@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import unittest
 from unittest.mock import patch, Mock
 import requests
+from src.crawler import udn_crawler
 from src.crawler.exceptions import NetworkError, ParseError
 
 class TestBaseCrawlerFunctions(unittest.TestCase):
@@ -9,51 +10,41 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         self.test_url = "https://udn.com/news/story/123456"
         self.test_search_term = "測試"
 
-    def test_handle_network_error(self):
+    @patch('src.crawler.udn_crawler.requests.get')
+    def test_handle_network_error(self, mock_get):
         """測試網路錯誤處理"""
-        def mock_request(*args, **kwargs):
-            raise requests.RequestException("Network error")
+        mock_get.side_effect = requests.RequestException("Network error")
             
-        with patch('requests.get', side_effect=mock_request):
-            with self.assertRaises(NetworkError):
-                response = requests.get(self.test_url)
-                response.raise_for_status()
+        with self.assertRaises(NetworkError):
+            udn_crawler.get_news_list(self.test_search_term)
 
-    def test_handle_parse_error(self):
+    @patch('src.crawler.udn_crawler.requests.get')
+    def test_handle_parse_error(self, mock_get):
         """測試解析錯誤處理"""
-        with patch('requests.get') as mock_get:
-            mock_response = Mock()
-            mock_response.text = "<html></html>"  # 無效的HTML結構
-            mock_get.return_value = mock_response
+        mock_response = Mock()
+        mock_response.text = "<html></html>"  # 無效的HTML結構
+        mock_get.return_value = mock_response
             
-            with self.assertRaises(ParseError) as context:
-                soup = BeautifulSoup(mock_response.text, "html.parser")
-                title = soup.find("h1", class_="non-existent")
-                if not title:
-                    raise ParseError("找不到必要元素")
-                
-            self.assertIn("找不到必要元素", str(context.exception))
+        with self.assertRaises(ParseError):
+            udn_crawler.get_article_content(self.test_url)
 
-    def test_response_validation(self):
+    @patch('src.crawler.udn_crawler.requests.get')
+    def test_response_validation(self, mock_get):
         """測試回應驗證"""
-        with patch('requests.get') as mock_get:
-            # 模擬成功的回應
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {"valid": "data"}
-            mock_get.return_value = mock_response
+        # 模擬成功的回應
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"lists": [{"title": "測試", "url": "test_url"}]}
+        mock_get.return_value = mock_response
             
-            response = mock_get(self.test_url)
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json(), {"valid": "data"})
+        result = udn_crawler.get_news_list(self.test_search_term)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["title"], "測試")
             
-            # 模擬失敗的回應
-            def mock_failed_request(*args, **kwargs):
-                raise requests.RequestException("404 Client Error")
-                
-            mock_get.side_effect = mock_failed_request
-            with self.assertRaises(requests.RequestException):
-                response = mock_get(self.test_url)
+        # 模擬失敗的回應
+        mock_get.side_effect = requests.RequestException("404 Client Error")
+        with self.assertRaises(NetworkError):
+            udn_crawler.get_news_list(self.test_search_term)
 
     def test_error_message_format(self):
         """測試錯誤訊息格式"""
