@@ -1,21 +1,21 @@
-from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Protocol, runtime_checkable
+from typing_extensions import Awaitable
 
-class BaseLLMClient(ABC):
+@runtime_checkable
+class LLMClientProtocol(Protocol):
     """
-    LLM 客戶端的基礎抽象類別。
-    所有的 LLM 實現都應該繼承這個類別。
+    LLM 客戶端的協議定義。
+    所有的 LLM 實現都應該遵循這個協議。
     """
     
-    @abstractmethod
-    async def chat_completion(
+    def chat_completion(
         self,
         messages: List[Dict[str, str]],
         model: str,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         **kwargs: Any
-    ) -> Dict[str, Any]:
+    ) -> Awaitable[Dict[str, Any]]:
         """
         執行聊天完成請求。
 
@@ -29,15 +29,14 @@ class BaseLLMClient(ABC):
         Returns:
             包含回應內容的字典
         """
-        pass
+        ...
 
-    @abstractmethod
-    async def embeddings(
+    def embeddings(
         self,
         texts: List[str],
         model: str,
         **kwargs: Any
-    ) -> List[List[float]]:
+    ) -> Awaitable[List[List[float]]]:
         """
         生成文本嵌入向量。
 
@@ -49,15 +48,14 @@ class BaseLLMClient(ABC):
         Returns:
             嵌入向量列表
         """
-        pass
+        ...
 
-    @abstractmethod
-    async def moderation(
+    def moderation(
         self,
         texts: List[str],
         model: Optional[str] = None,
         **kwargs: Any
-    ) -> Dict[str, Any]:
+    ) -> Awaitable[Dict[str, Any]]:
         """
         執行內容審核。
 
@@ -69,4 +67,4 @@ class BaseLLMClient(ABC):
         Returns:
             審核結果字典
         """
-        pass
+        ...

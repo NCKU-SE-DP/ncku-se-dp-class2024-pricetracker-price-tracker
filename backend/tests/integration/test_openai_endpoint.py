@@ -1,7 +1,7 @@
 import unittest
 import os
 from unittest.mock import patch, AsyncMock, MagicMock
-from src.llm_client.openai_client import OpenAIClient
+from src.llm_client.openai_client import create_openai_client
 
 # 控制是否執行真實 API 測試
 RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"
@@ -11,10 +11,9 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         """
         測試前的設置
         """
-        api_key = os.getenv("OPENAI_API_KEY", "fake_api_key")
-        self.client = OpenAIClient(api_key=api_key)
+        self.api_key = os.getenv("OPENAI_API_KEY", "fake_api_key")
 
-    @patch('openai.AsyncOpenAI')
+    @patch('src.llm_client.openai_client.AsyncOpenAI')
     async def test_chat_completion_mock(self, mock_openai_class):
         """
         測試模擬的 chat completion
@@ -49,17 +48,17 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         
         mock_openai_class.return_value = mock_client
         
-        # 重新初始化客戶端以使用 mock
-        self.client = OpenAIClient(api_key="fake_key")
+        # 建立客戶端
+        client = create_openai_client(api_key=self.api_key)
         
         messages = [{"role": "user", "content": "測試訊息"}]
-        response = await self.client.chat_completion(messages=messages)
+        response = await client.chat_completion(messages=messages)
         
         self.assertEqual(response["content"], "模擬回應")
         self.assertEqual(response["role"], "assistant")
         self.assertEqual(response["usage"]["total_tokens"], 30)
 
-    @patch('openai.AsyncOpenAI')
+    @patch('src.llm_client.openai_client.AsyncOpenAI')
     async def test_embeddings_mock(self, mock_openai_class):
         """
         測試模擬的 embeddings
@@ -80,15 +79,15 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         
         mock_openai_class.return_value = mock_client
         
-        # 重新初始化客戶端以使用 mock
-        self.client = OpenAIClient(api_key="fake_key")
+        # 建立客戶端
+        client = create_openai_client(api_key=self.api_key)
         
         texts = ["測試文本"]
-        embeddings = await self.client.embeddings(texts=texts)
+        embeddings = await client.embeddings(texts=texts)
         
         self.assertEqual(embeddings[0], [0.1, 0.2, 0.3])
 
-    @patch('openai.AsyncOpenAI')
+    @patch('src.llm_client.openai_client.AsyncOpenAI')
     async def test_moderation_mock(self, mock_openai_class):
         """
         測試模擬的 moderation
@@ -111,11 +110,11 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         
         mock_openai_class.return_value = mock_client
         
-        # 重新初始化客戶端以使用 mock
-        self.client = OpenAIClient(api_key="fake_key")
+        # 建立客戶端
+        client = create_openai_client(api_key=self.api_key)
         
         texts = ["測試文本"]
-        result = await self.client.moderation(texts=texts)
+        result = await client.moderation(texts=texts)
         
         self.assertFalse(result["results"][0]["flagged"])
         self.assertIn("categories", result["results"][0])
@@ -126,8 +125,9 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         """
         測試真實的 chat completion API 呼叫
         """
+        client = create_openai_client(api_key=self.api_key)
         messages = [{"role": "user", "content": "你好，請問今天天氣如何？"}]
-        response = await self.client.chat_completion(messages=messages)
+        response = await client.chat_completion(messages=messages)
         
         self.assertIn("content", response)
         self.assertIn("role", response)
@@ -138,8 +138,9 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         """
         測試真實的 embeddings API 呼叫
         """
+        client = create_openai_client(api_key=self.api_key)
         texts = ["這是一個測試文本"]
-        embeddings = await self.client.embeddings(texts=texts)
+        embeddings = await client.embeddings(texts=texts)
         
         self.assertTrue(isinstance(embeddings, list))
         self.assertTrue(isinstance(embeddings[0], list))
@@ -150,8 +151,9 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         """
         測試真實的 moderation API 呼叫
         """
+        client = create_openai_client(api_key=self.api_key)
         texts = ["這是一個普通的句子"]
-        result = await self.client.moderation(texts=texts)
+        result = await client.moderation(texts=texts)
         
         self.assertIn("results", result)
         self.assertTrue(isinstance(result["results"], list))
