@@ -1,4 +1,5 @@
 import unittest
+import requests
 from unittest.mock import patch, Mock
 from src.crawler import udn_crawler
 from src.crawler.exceptions import ParseError, NetworkError
