@@ -1,51 +1,18 @@
-from bs4 import BeautifulSoup
-import requests
-from urllib.parse import quote
 from openai import OpenAI
-import json
 import itertools
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
-from ...models import NewsArticle, user_news_association_table
-from ...config import settings
+from models import NewsArticle, user_news_association_table
+from config import settings
+from crawler import udn_crawler
 
 _id_counter = itertools.count(start=1000000)
 
 def get_new_info(search_term: str, is_initial: bool = False):
-    all_news_data = []
-    if is_initial:
-        for p in range(1, 10):
-            params = {
-                "page": p,
-                "id": f"search:{quote(search_term)}",
-                "channelId": 2,
-                "type": "searchword",
-            }
-            response = requests.get("https://udn.com/api/more", params=params)
-            all_news_data.extend(response.json()["lists"])
-    else:
-        params = {
-            "page": 1,
-            "id": f"search:{quote(search_term)}",
-            "channelId": 2,
-            "type": "searchword",
-        }
-        response = requests.get("https://udn.com/api/more", params=params)
-        all_news_data = response.json()["lists"]
-    return all_news_data
+    return udn_crawler.get_news_list(search_term, is_initial)
 
 def process_news_content(url: str):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    title = soup.find("h1", class_="article-content__title").text
-    time = soup.find("time", class_="article-content__time").text
-    content_section = soup.find("section", class_="article-content__editor")
-    paragraphs = [
-        p.text
-        for p in content_section.find_all("p")
-        if p.text.strip() != "" and "▪" not in p.text
-    ]
-    return title, time, paragraphs
+    return udn_crawler.get_article_content(url)
 
 def generate_ai_response(content: str, system_prompt: str):
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
