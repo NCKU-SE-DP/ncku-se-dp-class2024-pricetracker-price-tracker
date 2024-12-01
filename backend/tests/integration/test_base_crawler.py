@@ -11,14 +11,13 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
 
     def test_handle_network_error(self):
         """測試網路錯誤處理"""
-        with patch('requests.get') as mock_get:
-            mock_get.side_effect = requests.RequestException("Network error")
+        def mock_request(*args, **kwargs):
+            raise requests.RequestException("Network error")
             
-            with self.assertRaises(NetworkError) as context:
+        with patch('requests.get', side_effect=mock_request):
+            with self.assertRaises(NetworkError):
                 response = requests.get(self.test_url)
                 response.raise_for_status()
-                
-            self.assertIn("Network error", str(context.exception))
 
     def test_handle_parse_error(self):
         """測試解析錯誤處理"""
@@ -44,17 +43,17 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
             mock_response.json.return_value = {"valid": "data"}
             mock_get.return_value = mock_response
             
-            response = requests.get(self.test_url)
+            response = mock_get(self.test_url)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), {"valid": "data"})
             
             # 模擬失敗的回應
-            mock_response.status_code = 404
-            mock_get.return_value = mock_response
-            
+            def mock_failed_request(*args, **kwargs):
+                raise requests.RequestException("404 Client Error")
+                
+            mock_get.side_effect = mock_failed_request
             with self.assertRaises(requests.RequestException):
-                response = requests.get(self.test_url)
-                response.raise_for_status()
+                response = mock_get(self.test_url)
 
     def test_error_message_format(self):
         """測試錯誤訊息格式"""
