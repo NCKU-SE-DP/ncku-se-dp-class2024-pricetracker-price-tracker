@@ -1,6 +1,6 @@
 import unittest
 import os
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from src.llm_client.openai_client import OpenAIClient
 
 # 控制是否執行真實 API 測試
@@ -14,16 +14,16 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         api_key = os.getenv("OPENAI_API_KEY", "fake_api_key")
         self.client = OpenAIClient(api_key=api_key)
 
-    @patch('src.llm_client.openai_client.AsyncOpenAI')
-    async def test_chat_completion_mock(self, mock_openai):
+    @patch('openai.AsyncOpenAI')
+    async def test_chat_completion_mock(self, mock_openai_class):
         """
         測試模擬的 chat completion
         """
         # 設置模擬回應
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.choices = [
-            AsyncMock(
-                message=AsyncMock(
+            MagicMock(
+                message=MagicMock(
                     content="模擬回應",
                     role="assistant"
                 ),
@@ -31,16 +31,26 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
             )
         ]
         mock_response.model = "gpt-3.5-turbo"
-        mock_response.usage = AsyncMock(
+        mock_response.usage = MagicMock(
             prompt_tokens=10,
             completion_tokens=20,
             total_tokens=30
         )
         
         # 設置模擬客戶端
-        mock_client = AsyncMock()
-        mock_client.chat.completions.create.return_value = mock_response
-        mock_openai.return_value = mock_client
+        mock_completions = MagicMock()
+        mock_completions.create = AsyncMock(return_value=mock_response)
+        
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completions
+        
+        mock_client = MagicMock()
+        mock_client.chat = mock_chat
+        
+        mock_openai_class.return_value = mock_client
+        
+        # 重新初始化客戶端以使用 mock
+        self.client = OpenAIClient(api_key="fake_key")
         
         messages = [{"role": "user", "content": "測試訊息"}]
         response = await self.client.chat_completion(messages=messages)
@@ -49,42 +59,60 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response["role"], "assistant")
         self.assertEqual(response["usage"]["total_tokens"], 30)
 
-    @patch('src.llm_client.openai_client.AsyncOpenAI')
-    async def test_embeddings_mock(self, mock_openai):
+    @patch('openai.AsyncOpenAI')
+    async def test_embeddings_mock(self, mock_openai_class):
         """
         測試模擬的 embeddings
         """
-        mock_response = AsyncMock()
-        mock_response.data = [AsyncMock(embedding=[0.1, 0.2, 0.3])]
+        # 設置模擬回應
+        mock_embedding_data = MagicMock()
+        mock_embedding_data.embedding = [0.1, 0.2, 0.3]
+        
+        mock_response = MagicMock()
+        mock_response.data = [mock_embedding_data]
         
         # 設置模擬客戶端
-        mock_client = AsyncMock()
-        mock_client.embeddings.create.return_value = mock_response
-        mock_openai.return_value = mock_client
+        mock_embeddings = MagicMock()
+        mock_embeddings.create = AsyncMock(return_value=mock_response)
+        
+        mock_client = MagicMock()
+        mock_client.embeddings = mock_embeddings
+        
+        mock_openai_class.return_value = mock_client
+        
+        # 重新初始化客戶端以使用 mock
+        self.client = OpenAIClient(api_key="fake_key")
         
         texts = ["測試文本"]
         embeddings = await self.client.embeddings(texts=texts)
         
         self.assertEqual(embeddings[0], [0.1, 0.2, 0.3])
 
-    @patch('src.llm_client.openai_client.AsyncOpenAI')
-    async def test_moderation_mock(self, mock_openai):
+    @patch('openai.AsyncOpenAI')
+    async def test_moderation_mock(self, mock_openai_class):
         """
         測試模擬的 moderation
         """
-        mock_response = AsyncMock()
-        mock_response.results = [
-            AsyncMock(
-                flagged=False,
-                categories={"violence": False, "hate": False},
-                category_scores={"violence": 0.1, "hate": 0.1}
-            )
-        ]
+        # 設置模擬回應
+        mock_result = MagicMock()
+        mock_result.flagged = False
+        mock_result.categories = {"violence": False, "hate": False}
+        mock_result.category_scores = {"violence": 0.1, "hate": 0.1}
+        
+        mock_response = MagicMock()
+        mock_response.results = [mock_result]
         
         # 設置模擬客戶端
-        mock_client = AsyncMock()
-        mock_client.moderations.create.return_value = mock_response
-        mock_openai.return_value = mock_client
+        mock_moderations = MagicMock()
+        mock_moderations.create = AsyncMock(return_value=mock_response)
+        
+        mock_client = MagicMock()
+        mock_client.moderations = mock_moderations
+        
+        mock_openai_class.return_value = mock_client
+        
+        # 重新初始化客戶端以使用 mock
+        self.client = OpenAIClient(api_key="fake_key")
         
         texts = ["測試文本"]
         result = await self.client.moderation(texts=texts)
