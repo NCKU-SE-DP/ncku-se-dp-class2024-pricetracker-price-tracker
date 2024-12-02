@@ -9,7 +9,7 @@ router = APIRouter(
 
 @router.get("/necessities-price")
 def get_necessities_prices(
-        category=Query(None), commodity=Query(None)
+    category=Query(None), commodity=Query(None)
 ):
     """
     這個 API 端點從政府開放數據平台檢索生活必需品的價格資訊。

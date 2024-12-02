@@ -34,6 +34,7 @@ def convert_news_to_dict(news):
         "time": news.time,
         "content": news.content,
     }
+
 article_id_counter = itertools.count(start=1000000)
 def add_news_article_to_db(news_article_data):
     """

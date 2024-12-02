@@ -82,8 +82,6 @@ async def search_news(request: PromptRequest):
     
     # 根據提取的關鍵字獲取新聞文章
     relevant_news_items = fetch_news_articles(extracted_keywords, is_initial=False)
-    print(relevant_news_items)
-    print("#############")
     for news_item in relevant_news_items:
         try:
             # news_response = requests.get(news_item["titleLink"])

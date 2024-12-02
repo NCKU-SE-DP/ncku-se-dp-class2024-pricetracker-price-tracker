@@ -25,8 +25,8 @@ def read_users_me(user=Depends(authenticate_user_token)):
 
 @router.post("/login")
 async def login_for_access_token(
-        form_data: OAuth2PasswordRequestForm = Depends(),
-        db_session: Session = Depends(session_opener)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db_session: Session = Depends(session_opener)
 ):
     """
     使用者登入並生成訪問令牌 (Access Token)。
