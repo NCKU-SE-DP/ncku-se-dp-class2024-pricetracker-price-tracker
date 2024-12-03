@@ -112,23 +112,14 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["is_upvoted"] is False
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('src.news.router.OpenAI')
+    mock_openai_client = mocker.patch('src.llm_client.openai_client.OpenAIClient._get_response', autospec=True)
 
-    mock_message = Mock()
-    mock_message.content = return_content
-
-    mock_choice = Mock()
-    mock_choice.message = mock_message
-
-    mock_completion = Mock()
-    mock_completion.choices = [mock_choice]
-
-    mock_openai_client.return_value.chat.completions.create.return_value = mock_completion
+    mock_openai_client.return_value = return_content
 
     return mock_openai_client
 
 def test_search_news(mocker):
-    mock_openai(mocker, "keywords")
+    mock_openai(mocker, '{"keywords": ["keyword1", "keyword2"]}')  # 確保返回有效的 JSON 字符串
 
     mock_get_new_info = mocker.patch("src.news.router.fetch_news_articles", return_value=[
         Headline(title="Title of the article", url="https://udn.com/news/story/7240/8383719")
