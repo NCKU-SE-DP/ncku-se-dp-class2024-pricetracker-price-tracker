@@ -1,17 +1,18 @@
 import itertools
 import requests
-# from urllib.parse import quote
 import json
 from bs4 import BeautifulSoup
-from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy import select, insert, delete
 from ..database import Session
 from ..auth.models import user_news_association_table
 from ..crawler.udn_crawler import UDNCrawler
 from ..crawler.crawler_base import NewsWithSummary
+from ..llm_client.openai_client import OpenAIClient
+from ..config import Config
 
 crawler = UDNCrawler()
+openai_client = OpenAIClient(_api_key=Config.OpenAI.OPENAI_TOKEN)
 
 def parse_summary_result():
     response_data = {}
@@ -70,21 +71,7 @@ def process_and_store_relevant_news(fetch_multiple_pages=False):
     news_articles = fetch_news_articles("價格", is_initial=fetch_multiple_pages)
     for article in news_articles:
         article_title = article["title"]
-        relevance_assessment_prompt = [
-            {
-                "role": "system",
-                "content": (
-                    "你是一個關聯度評估機器人，請評估新聞標題是否與「民生用品的價格變化」相關，"
-                    "並給予 'high'、'medium'、'low' 評價。(僅需回答 'high'、'medium'、'low' 三個詞之一)"
-                ),
-            },
-            {"role": "user", "content": f"{article_title}"},
-        ]
-        ai_response = OpenAI(api_key="xxx").chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=relevance_assessment_prompt,
-        )
-        relevance_rating = ai_response.choices[0].message.content
+        relevance_rating = openai_client.get_relevance_assessment(article_title)
         if relevance_rating == "high":
             article_response = requests.get(article["titleLink"])
             article_soup = BeautifulSoup(article_response.text, "html.parser")
@@ -105,24 +92,7 @@ def process_and_store_relevant_news(fetch_multiple_pages=False):
                 "time": publication_time,
                 "content": article_paragraphs,
             }
-            
-            summary_generation_prompt = [
-                {
-                    "role": "system",
-                    "content": (
-                        "你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 "
-                        "(影響、原因各50個字，請以json格式回答 {'影響': '...', '原因': '...'})"
-                    ),
-                },
-                {"role": "user", "content": " ".join(detailed_article["content"])},
-            ]
-            
-            summary_response = OpenAI(api_key="xxx").chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=summary_generation_prompt,
-            )
-            
-            summary_result = json.loads(summary_response.choices[0].message.content)
+            summary_result = openai_client.get_summary(" ".join(detailed_article["content"]))
             detailed_article["summary"] = summary_result["影響"]
             detailed_article["reason"] = summary_result["原因"]
             

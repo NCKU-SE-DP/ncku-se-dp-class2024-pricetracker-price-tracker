@@ -1,13 +1,13 @@
 import json
 import requests
-from bs4 import BeautifulSoup
 from fastapi import APIRouter, Depends
 from openai import OpenAI
 from ..auth.service import authenticate_user_token
 from ..database import session_opener
 from .models import NewsArticle
 from .schemas import PromptRequest, NewsSumaryRequestSchema
-from .service import article_id_counter, fetch_news_articles, get_article_upvote_details, toggle_article_upvote, process_news_item, parse_summary_result, convert_news_to_dict
+from .service import openai_client, article_id_counter, fetch_news_articles, get_article_upvote_details, toggle_article_upvote, process_news_item, convert_news_to_dict
+
 router = APIRouter(
     prefix="/news",
     tags=["news"],
@@ -66,21 +66,9 @@ async def search_news(request: PromptRequest):
     :return: JSON 格式的新聞列表，每項新聞包括 `url`、`title`、`time`、`content` 和 `id`。
     """
     user_prompt = request.prompt
-    extracted_news_list = []
-    prompt_messages = [
-        {
-            "role": "system",
-            "content": "你是一個關鍵字提取機器人，用戶將會輸入一段文字，表示其希望看見的新聞內容，請提取出用戶希望看見的關鍵字，請截取最重要的關鍵字即可，避免出現「新聞」、「資訊」等混淆搜尋引擎的字詞。(僅須回答關鍵字，若有多個關鍵字，請以空格分隔)",
-        },
-        {"role": "user", "content": f"{user_prompt}"},
-    ]
-    ai_completion = OpenAI(api_key="xxx").chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=prompt_messages,
-    )
-    extracted_keywords = ai_completion.choices[0].message.content
-    
+    extracted_keywords = openai_client.extract_keywords(user_prompt)
     # 根據提取的關鍵字獲取新聞文章
+    extracted_news_list = []
     relevant_news_items = fetch_news_articles(extracted_keywords, is_initial=False)
     for news_item in relevant_news_items:
         try:
@@ -102,23 +90,9 @@ async def news_summary(
     :return: JSON 格式的摘要結果，包括 `summary` (影響) 和 `reason` (原因)。
     """
     summary_response = {}
-    prompt_messages = [
-        {
-            "role": "system",
-            "content": "你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 (影響、原因各50個字，請以json格式回答 {'影響': '...', '原因': '...'})",
-        },
-        {"role": "user", "content": f"{news_summary_request.content}"},
-    ]
-    completion_response = OpenAI(api_key="xxx").chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=prompt_messages,
-    )
-
-    completion_content = completion_response.choices[0].message.content
-    if completion_content:
-        result_data = json.loads(completion_content)
-        summary_response["summary"] = result_data["影響"]
-        summary_response["reason"] = result_data["原因"]
+    result_data = openai_client.get_summary(news_summary_request.content)
+    summary_response["summary"] = result_data["影響"]
+    summary_response["reason"] = result_data["原因"]
     return summary_response
 
 @router.post("/{article_id}/upvote")
