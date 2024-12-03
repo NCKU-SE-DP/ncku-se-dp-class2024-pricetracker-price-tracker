@@ -84,23 +84,6 @@ async def search_news(request: PromptRequest):
     relevant_news_items = fetch_news_articles(extracted_keywords, is_initial=False)
     for news_item in relevant_news_items:
         try:
-            # news_response = requests.get(news_item["titleLink"])
-            # news_soup = BeautifulSoup(news_response.text, "html.parser")
-            # news_title = news_soup.find("h1", class_="article-content__title").text
-            # news_time = news_soup.find("time", class_="article-content__time").text
-            # news_content_section = news_soup.find("section", class_="article-content__editor")
-            # content_paragraphs = [
-            #     paragraph.text
-            #     for paragraph in news_content_section.find_all("p")
-            #     if paragraph.text.strip() != "" and "▪" not in paragraph.text
-            # ]
-            # detailed_news_info = {
-            #     "url": news_item["titleLink"],
-            #     "title": news_title,
-            #     "time": news_time,
-            #     "content": content_paragraphs,
-            # }
-            # detailed_news_info["content"] = " ".join(detailed_news_info["content"])
             detailed_news_info = convert_news_to_dict(process_news_item(news_item))
             detailed_news_info["id"] = next(article_id_counter)
             extracted_news_list.append(detailed_news_info)
