@@ -24,12 +24,12 @@ class TestOpenAIClient(unittest.TestCase):
         self.assertIn("原因", result)
     @unittest.skipIf(not RUN_REAL_API_TESTS, "模擬 API 呼叫，跳過真實測試")
     def test_extract_search_keywords_real(self):
-        result = self.client.extract_search_keywords("這篇新聞提到食品價格的波動以及市場的供應鏈問題")
+        result = self.client.extract_search("這篇新聞提到食品價格的波動以及市場的供應鏈問題")
         self.assertGreater(len(result.split()), 0)
-    @patch('src.llm_client.openai_client.OpenAIClient._get_response')
+    @patch('src.llm_client.openai_client.OpenAIClient._generate_text')
     def test_evaluate_relevance(self, mock_generate):
         mock_generate.return_value = 'high'
-        result = self.client.get_relevance_assessment("食品價格上漲")
+        result = self.client.evaluate_relevance("食品價格上漲")
         self.assertEqual(result, 'high')
         mock_generate.assert_called_once_with(
             MessagePassingInterface(
@@ -37,10 +37,10 @@ class TestOpenAIClient(unittest.TestCase):
                 user_content="食品價格上漲"
             )
         )
-    @patch('src.llm_client.openai_client.OpenAIClient._get_response')
+    @patch('src.llm_client.openai_client.OpenAIClient._generate_text')
     def test_generate_summary(self, mock_generate):
         mock_generate.return_value = '{"影響": "影響描述", "原因": "原因描述"}'
-        result = self.client.get_summary("一篇新聞內容")
+        result = self.client.generate_summary("一篇新聞內容")
         self.assertEqual(result, {'影響': '影響描述', '原因': '原因描述'})
         mock_generate.assert_called_once_with(
             MessagePassingInterface(
@@ -48,10 +48,10 @@ class TestOpenAIClient(unittest.TestCase):
                 user_content="一篇新聞內容"
             )
         )
-    @patch('src.llm_client.openai_client.OpenAIClient._get_response')
+    @patch('src.llm_client.openai_client.OpenAIClient._generate_text')
     def test_extract_search_keywords(self, mock_generate):
         mock_generate.return_value = '食品 價格'
-        result = self.client.extract_keywords("一段希望看到的新聞文字")
+        result = self.client.extract_search("一段希望看到的新聞文字")
         self.assertEqual(result, '食品 價格')
         mock_generate.assert_called_once_with(
             MessagePassingInterface(

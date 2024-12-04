@@ -71,7 +71,7 @@ def process_and_store_relevant_news(fetch_multiple_pages=False):
     news_articles = fetch_news_articles("價格", is_initial=fetch_multiple_pages)
     for article in news_articles:
         article_title = article["title"]
-        relevance_rating = openai_client.get_relevance_assessment(article_title)
+        relevance_rating = openai_client.evaluate_relevance(article_title)
         if relevance_rating == "high":
             article_response = requests.get(article["titleLink"])
             article_soup = BeautifulSoup(article_response.text, "html.parser")
@@ -92,7 +92,7 @@ def process_and_store_relevant_news(fetch_multiple_pages=False):
                 "time": publication_time,
                 "content": article_paragraphs,
             }
-            summary_result = openai_client.get_summary(" ".join(detailed_article["content"]))
+            summary_result = openai_client.generate_summary(" ".join(detailed_article["content"]))
             detailed_article["summary"] = summary_result["影響"]
             detailed_article["reason"] = summary_result["原因"]
             

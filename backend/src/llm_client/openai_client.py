@@ -9,11 +9,10 @@ class OpenAIClient(LLMClientBase):
         try:
             OpenAI.api_key = _api_key
             self.openai_client = OpenAI
-            # self.openai_client = OpenAI(api_key=_api_key)
         except Exception as error:
             raise ValueError(f"Failed to initialize OpenAI client: {error}")
     
-    def _get_response(self, prompt: MessagePassingInterface) -> str:
+    def _generate_text(self, prompt: MessagePassingInterface) -> str:
         try:
             ai_completion = self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -24,14 +23,14 @@ class OpenAIClient(LLMClientBase):
             print(f"Failed to get response: {error}")
             return ""
     
-    def extract_keywords(self, prompt_text: str) -> str:
-        return self._get_response(MessagePassingInterface(
+    def extract_search(self, prompt_text: str) -> str:
+        return self._generate_text(MessagePassingInterface(
             system_content=Prompt_text.keyword_extraction(),
             user_content=prompt_text
         ))
     
-    def get_summary(self, prompt_text: str) -> Optional[dict[str, str]]:
-        response = self._get_response(MessagePassingInterface(
+    def generate_summary(self, prompt_text: str) -> Optional[dict[str, str]]:
+        response = self._generate_text(MessagePassingInterface(
             system_content=Prompt_text.news_summary(),
             user_content=prompt_text
         ))
@@ -40,11 +39,12 @@ class OpenAIClient(LLMClientBase):
         except json.JSONDecodeError:
             raise ValueError("Failed to decode response")
     
-    def get_relevance_assessment(self, prompt_text: str) -> Optional[str]:
-        response = self._get_response(MessagePassingInterface(
+    def evaluate_relevance(self, prompt_text: str) -> Optional[str]:
+        response = self._generate_text(MessagePassingInterface(
             system_content=Prompt_text.relevance_assessment(),
             user_content=prompt_text
         ))
+        print(response)
         if response not in ["high", "medium", "low"]:
             raise ValueError("Invalid response")
         return response

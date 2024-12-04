@@ -66,7 +66,7 @@ async def search_news(request: PromptRequest):
     :return: JSON 格式的新聞列表，每項新聞包括 `url`、`title`、`time`、`content` 和 `id`。
     """
     user_prompt = request.prompt
-    extracted_keywords = openai_client.extract_keywords(user_prompt)
+    extracted_keywords = openai_client.extract_search(user_prompt)
     # 根據提取的關鍵字獲取新聞文章
     extracted_news_list = []
     relevant_news_items = fetch_news_articles(extracted_keywords, is_initial=False)
@@ -90,7 +90,7 @@ async def news_summary(
     :return: JSON 格式的摘要結果，包括 `summary` (影響) 和 `reason` (原因)。
     """
     summary_response = {}
-    result_data = openai_client.get_summary(news_summary_request.content)
+    result_data = openai_client.generate_summary(news_summary_request.content)
     summary_response["summary"] = result_data["影響"]
     summary_response["reason"] = result_data["原因"]
     return summary_response
