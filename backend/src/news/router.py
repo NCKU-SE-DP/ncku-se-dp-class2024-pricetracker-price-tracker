@@ -9,7 +9,9 @@ from .service import (
     get_article_upvote_details,
     fetch_news_articles_by_keyword,
     article_id_counter,
-    toggle_upvote
+    toggle_upvote,
+    udn_crawler,
+    convert_news_to_dict
     
 )
 import os
@@ -85,26 +87,7 @@ async def search_news(request: PromptRequest):
     news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
         try:
-            response = requests.get(news["titleLink"])
-            soup = BeautifulSoup(response.text, "html.parser")
-            # 標題
-            title = soup.find("h1", class_="article-content__title").text
-            time = soup.find("time", class_="article-content__time").text
-            # 定位到包含文章?容的 <section>
-            content_section = soup.find("section", class_="article-content__editor")
-
-            paragraphs = [
-                p.text
-                for p in content_section.find_all("p")
-                if p.text.strip() != "" and "?" not in p.text
-            ]
-            detailed_news = {
-                "url": news["titleLink"],
-                "title": title,
-                "time": time,
-                "content": paragraphs,
-            }
-            detailed_news["content"] = " ".join(detailed_news["content"])
+            detailed_news = convert_news_to_dict(udn_crawler.parse(news.url))
             detailed_news["id"] = next(article_id_counter)
             news_list.append(detailed_news)
         except Exception as error_message:

@@ -11,9 +11,23 @@ from ..models import user_news_association_table
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 from src.news.config import get_NewsSettings
+from src.crawler.udn_crawler import UDNCrawler
+udn_crawler = UDNCrawler()
 NewsSettings=get_NewsSettings()
 article_id_counter = itertools.count(start=1000000)
 openai_client = OpenAI(api_key=NewsSettings.Openai_APIKEY)
+def process_news_item(news):
+    """
+    Fetches detailed content from a news article.
+    """
+    return udn_crawler.parse(news.url)
+def convert_news_to_dict(news):
+    return {
+        "url": news.url,
+        "title": news.title,
+        "time": news.time,
+        "content": news.content,
+    }
 def add_news_article(news_data):
     """
     add new to db
@@ -21,16 +35,8 @@ def add_news_article(news_data):
     :return:
     """
     session = Session()
-    session.add(NewsArticle(
-        url=news_data["url"],
-        title=news_data["title"],
-        time=news_data["time"],
-        content=" ".join(news_data["content"]),  # 將內容list轉換為字串
-        summary=news_data["summary"],
-        reason=news_data["reason"],
-    ))
-    session.commit()
-    session.close()
+    udn_crawler.save(news=news_data, db=session)
+
 def fetch_news_articles_by_keyword(search_term, is_initial=False):
     """
     get new by keyword
@@ -39,33 +45,10 @@ def fetch_news_articles_by_keyword(search_term, is_initial=False):
     :param is_initial: bool indicate whether  this is the initial fetch
     :return:
     """
-    all_news_data = []
-    # iterate pages to get more news data, not actually get all news data
     if is_initial:
-        news = []
-        for page in range(1, 10):
-            pageinfo = {
-                "page": page,
-                "id": f"search:{quote(search_term)}",
-                "channelId": 2,
-                "type": "searchword",
-            }
-            response = requests.get(NEWS_LINK, params=pageinfo)
-            news.append(response.json()["lists"])
-
-        for result in news:
-            all_news_data.append(result)
+        return udn_crawler.startup(search_term=search_term)
     else:
-        pageinfo = {
-            "page": 1,
-            "id": f"search:{quote(search_term)}",
-            "channelId": 2,
-            "type": "searchword",
-        }
-        response = requests.get(NEWS_LINK, params=pageinfo)
-
-        all_news_data = response.json()["lists"]
-    return all_news_data
+        return udn_crawler.get_headline(search_term=search_term, page=1)
 def get_new_info(is_initial=False):
     """
     get new info
@@ -89,25 +72,7 @@ def get_new_info(is_initial=False):
         )
         relevance = summary_completion.choices[0].message.content
         if relevance == "high":
-            response = requests.get(news["titleLink"])
-            soup = BeautifulSoup(response.text, "html.parser")
-            # 標題
-            title = soup.find("h1", class_="article-content__title").text
-            time = soup.find("time", class_="article-content__time").text
-            # 定位到包含文章內容的 <section>
-            content_section = soup.find("section", class_="article-content__editor")
-
-            paragraphs = [
-                p.text
-                for p in content_section.find_all("p")
-                if p.text.strip() != "" and "?" not in p.text
-            ]
-            detailed_news =  {
-                "url": news["titleLink"],
-                "title": title,
-                "time": time,
-                "content": paragraphs,
-            }
+            detailed_news = udn_crawler.parse(news.url)
             GPTinfo = [
                 {
                     "role": "system",

@@ -9,6 +9,7 @@ from src.database import Base,session_opener
 from src.auth.models import User
 from src.news.models import NewsArticle
 from src.models import user_news_association_table
+from src.crawler.crawler_base import Headline
 from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
 from src.auth.service import pwd_context
 from unittest.mock import Mock
@@ -130,7 +131,7 @@ def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
     mock_get_new_info = mocker.patch("src.news.router.fetch_news_articles_by_keyword", return_value=[
-        {"titleLink": "http://example.com/news1"}
+        Headline(title="Test Title", url="https://udn.com/api/more/testing/news1")
     ])
 
     mock_get = mocker.patch("src.news.service.requests.get", return_value=mocker.Mock(
