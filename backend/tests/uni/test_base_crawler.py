@@ -61,7 +61,11 @@ class TestNewsCrawlerBase(unittest.TestCase):
         self.assertEqual(news.time, "2023-09-08T00:00:00")
         self.assertEqual(news.content, "This is the content of the article.")
 
+<<<<<<< HEAD
     @patch('src.crawler.base.Session')
+=======
+    @patch('src.crawler.crawler_base.Session')
+>>>>>>> e69b562f6c36beacb9ceb34f30b8c1b35d5c89c1
     def test_save(self, mock_db_session):
         news = News(
             title="Test Article",

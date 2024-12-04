@@ -38,7 +38,9 @@ from sqlalchemy.orm import Session
 import requests
 from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
 from urllib.parse import quote
+from src.auth.models import User
 from src.news.models import NewsArticle
+from .exceptions import DomainMismatchException
 class UDNCrawler(NewsCrawlerBase):
     CHANNEL_ID = 2
 
@@ -98,12 +100,16 @@ class UDNCrawler(NewsCrawlerBase):
         return [Headline(**item) for item in processed_items]
 
     def parse(self, url: str) -> News:
-        response=self._perform_request(url=url)
-        soup=BeautifulSoup(response.text,"html.parser")
-        return self._extract_news(soup,url)
+        response = self._perform_request(url)
+        if not self._is_valid_url(url):
+            raise DomainMismatchException(url)
+        return self._extract_news(BeautifulSoup(response.text, "html.parser"), url)
     @staticmethod
     def _extract_news(soup: BeautifulSoup, url: str) -> News:
-        title=soup.find("h1",class_="article-content__title").text
+        title_element = soup.find("h1", class_="article-content__title")
+        if title_element is None:
+            raise ValueError(f"Unable to find title for URL: {url}")
+        title = title_element.text
         time=soup.find("time",class_="article-content__time").text
         content_section = soup.find("section", class_="article-content__editor")
         paragraphs = [
