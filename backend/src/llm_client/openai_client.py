@@ -44,7 +44,6 @@ class OpenAIClient(LLMClientBase):
             system_content=Prompt_text.relevance_assessment(),
             user_content=prompt_text
         ))
-        print(response)
         if response not in ["high", "medium", "low"]:
             raise ValueError("Invalid response")
         return response
