@@ -43,7 +43,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cd backend
-          pytest tests/crawler --cov=src --cov-report=xml --disable-warnings
+          pytest tests/llm_client --cov=src --cov-report=xml --disable-warnings
 
       - name: Run llm_clients tests
         env:
