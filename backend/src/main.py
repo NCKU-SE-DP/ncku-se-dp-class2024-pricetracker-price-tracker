@@ -9,6 +9,7 @@ from auth.auth import router as auth_router
 from news.news import router as news_router
 from prices.prices import router as prices_router
 from news import news
+from news.models import get_new
 
 # Initialize database
 Base.metadata.create_all(bind=engine)
@@ -40,7 +41,7 @@ app.include_router(prices_router)
 async def scheduled_news_update():
     db = SessionLocal()
     try:
-        await news.get_new(db)
+        get_new(db)
     finally:
         db.close()
 
@@ -50,7 +51,7 @@ async def startup_event():
     db = SessionLocal()
     try:
         if db.query(NewsArticle).count() == 0:
-            await news.get_new(db, is_initial=True)
+            get_new(db, is_initial=True)
     finally:
         db.close()
     
