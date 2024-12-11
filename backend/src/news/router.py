@@ -5,8 +5,8 @@ from openai import OpenAI
 from ..auth.service import authenticate_user_token
 from ..database import session_opener
 from .models import NewsArticle
-from .schemas import PromptRequest, NewsSumaryRequestSchema
-from .service import openai_client, article_id_counter, fetch_news_articles, get_article_upvote_details, toggle_article_upvote, process_news_item, convert_news_to_dict
+from .schemas import PromptRequest, NewsSumaryRequestSchema, NewsSummaryCustomModelRequestSchema
+from .service import openai_client, anthropic_client, article_id_counter, fetch_news_articles, get_article_upvote_details, toggle_article_upvote, process_news_item, convert_news_to_dict
 
 router = APIRouter(
     prefix="/news",
@@ -94,6 +94,22 @@ async def news_summary(
     summary_response["summary"] = result_data["影響"]
     summary_response["reason"] = result_data["原因"]
     return summary_response
+
+@router.post("/news_summary_custom_model")
+async def summarize_news_with_custom_model(schema: NewsSummaryCustomModelRequestSchema, user=Depends(authenticate_user_token)):
+    response = {}
+    if not schema.ai_model:
+        return {"message": "Model is required."}
+    elif schema.ai_model.lower() == "openai":
+        result = openai_client.generate_summary(schema.content)
+    elif schema.ai_model.lower() == "anthropic" or schema.ai_model.lower() == "claude":
+        result = anthropic_client.generate_summary(schema.content)
+    else:
+        return {"message": "Invalid model."}
+    if result:
+        response["summary"] = result["影響"]
+        response["reason"] = result["原因"]
+    return response
 
 @router.post("/{article_id}/upvote")
 def upvote_article(

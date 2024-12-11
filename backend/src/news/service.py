@@ -8,11 +8,14 @@ from ..database import Session
 from ..auth.models import user_news_association_table
 from ..crawler.udn_crawler import UDNCrawler
 from ..crawler.crawler_base import NewsWithSummary
-from ..llm_client.openai_client import OpenAIClient
-from ..config import Config
+from ..llm_client.clients import OpenAIClient, AnthropicClient
+from dotenv import load_dotenv
+import os
+load_dotenv()
+openai_client = OpenAIClient(api_key=os.getenv("openai"))
+anthropic_client = AnthropicClient(api_key=os.getenv("claude"))
 
 crawler = UDNCrawler()
-openai_client = OpenAIClient(_api_key=Config.OpenAI.OPENAI_TOKEN)
 
 def parse_summary_result():
     response_data = {}
