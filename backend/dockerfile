@@ -12,13 +12,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 將當前目錄複製到容器内的工作目錄
 COPY . .
+WORKDIR /app/src
 
 # 開啟端口
 EXPOSE 8000
 
 # 定義環境變量
-ENV MODULE_NAME="app.main"
-ENV VARIABLE_NAME="app"
+ENV MODULE_NAME="src.main"
+ENV VARIABLE_NAME="src"
 
 # 使用 uvicorn 運行 fastapi 應用
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

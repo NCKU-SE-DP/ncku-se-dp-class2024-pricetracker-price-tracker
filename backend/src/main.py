@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sentry_sdk
 from apscheduler.schedulers.background import BackgroundScheduler
-from .config import settings
-from .database import engine, Base, SessionLocal
-from .models import NewsArticle
-from auth import routes as auth_router
-from news import routes as news_router
-from prices import routes as prices_router
+from config import settings
+from database import engine, Base, SessionLocal
+from models import NewsArticle
+from auth.auth import router as auth_router
+from news.news import router as news_router
+from prices.prices import router as prices_router
 from news import news
 
 # Initialize database
@@ -33,20 +33,29 @@ app.add_middleware(
 )
 
 # Register routers
-app.include_router(auth_router, prefix="/api/v1/users", tags=["users"])
-app.include_router(news_router, prefix="/api/v1/news", tags=["news"])
-app.include_router(prices_router, prefix="/api/v1/prices", tags=["prices"])
+app.include_router(auth_router)
+app.include_router(news_router)
+app.include_router(prices_router)
+
+async def scheduled_news_update():
+    db = SessionLocal()
+    try:
+        await news.get_new(db)
+    finally:
+        db.close()
 
 @app.on_event("startup")
 async def startup_event():
     # Initialize news database if empty
     db = SessionLocal()
-    if db.query(NewsArticle).count() == 0:
-        await news.get_new(db)
-    db.close()
+    try:
+        if db.query(NewsArticle).count() == 0:
+            await news.get_new(db, is_initial=True)
+    finally:
+        db.close()
     
     # Start scheduler
-    scheduler.add_job(news.get_new, "interval", minutes=100)
+    scheduler.add_job(scheduled_news_update, "interval", minutes=100)
     scheduler.start()
 
 @app.on_event("shutdown")
