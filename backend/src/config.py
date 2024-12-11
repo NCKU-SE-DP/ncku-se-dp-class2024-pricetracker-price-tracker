@@ -1,8 +1,8 @@
 from pydantic_settings import BaseSettings
 import os 
-from dotenv import find_dotenv, load_dotenv
 
-load_dotenv(find_dotenv(".env"))
+
+
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///news_database.db"
