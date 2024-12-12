@@ -12,3 +12,9 @@ backend/pyvenv.cfg
 backend/.coverage
 backend/coverage.xml
 backend/coverage.xml
+backend/coverage.xml
+backend/.coverage
+lastpt.md
+pr.md
+backend/.coverage
+backend/coverage.xml
