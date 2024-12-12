@@ -1,21 +1,25 @@
+from abc import abstractmethod, ABC
 import json
-import openai as OpenAI
+import aisuite
 from typing import Optional
-from .base import LLMClientBase, MessagePassingInterface
 from .prompts import Prompt_text
+from .base import MessagePassingInterface, LLMClientBase
 
-class OpenAIClient(LLMClientBase):
-    def __init__(self, _api_key: str):
-        try:
-            OpenAI.api_key = _api_key
-            self.openai_client = OpenAI
-        except Exception as error:
-            raise ValueError(f"Failed to initialize OpenAI client: {error}")
-    
+class LLMClientTemplate(LLMClientBase, ABC):
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.model: str = ...
+        self._initialize_client()
+
+    # initialize client function should be abstract
+    @abstractmethod
+    def _initialize_client(self):
+        ...
+
     def _generate_text(self, prompt: MessagePassingInterface) -> str:
         try:
-            ai_completion = self.openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+            ai_completion = self.client.chat.completions.create(
+                model=self.model,
                 messages=prompt.to_dict
             )
             return ai_completion.choices[0].message.content
@@ -29,7 +33,7 @@ class OpenAIClient(LLMClientBase):
             user_content=prompt_text
         ))
     
-    def generate_summary(self, prompt_text: str) -> Optional[dict[str, str]]:
+    def generate_summary(self, prompt_text: str) -> dict[str, str]:
         response = self._generate_text(MessagePassingInterface(
             system_content=Prompt_text.news_summary(),
             user_content=prompt_text
