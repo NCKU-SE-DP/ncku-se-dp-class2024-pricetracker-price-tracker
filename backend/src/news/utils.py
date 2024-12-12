@@ -5,8 +5,12 @@ from src.models import user_news_association_table, NewsArticle
 from openai import OpenAI
 from src.auth.database import SessionLocal
 from src.crawler.udn_crawler import UDNCrawler
+from src.llm_client.openai_client import OpenAIClient
+from src.llm_client.base import MessageInterface
 
 crawler = UDNCrawler()
+llm_client = OpenAIClient(api_key="xxx")
+
 
 def store_news(news_data):
     """
@@ -31,11 +35,9 @@ def get_new_info(search_term, fetch_all_pages=False):
     """
     
 
-    if fetch_all_pages:
-        all_news_data = crawler.startup(search_term=search_term)
-    else:
-        all_news_data = crawler.get_headline(search_term,page=1)
-    return all_news_data
+    headlines = crawler.get_headline(search_term, page=(1, 10) if fetch_all_pages else 1)
+    return [headline.dict() for headline in headlines]
+
 
 
 def toggle_upvote(n_id, u_id, db):

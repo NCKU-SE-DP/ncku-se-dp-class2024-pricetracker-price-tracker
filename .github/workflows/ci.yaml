@@ -7,10 +7,7 @@ on:
       - 'develop'
       - 'fix/integration-test'
       - 'refactor/crawler-oop-implementation'
-  pull_request:
-    branches:
-      - 'main'
-      - 'develop'
+      - 'refactor/llm_client'
 
 jobs:
   test:

@@ -155,7 +155,6 @@ def test_search_news(mocker):
     assert data[0]["time"] == "2024-09-10"
     assert data[0]["content"] == "This is a test paragraph."
 
-
 def test_news_summary(mocker, test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
     openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
@@ -168,6 +167,7 @@ def test_news_summary(mocker, test_token):
     json_response = response.json()
     assert json_response["summary"] == "test impact"
     assert json_response["reason"] == "test reason"
+    
 
 
 def test_upvote_article(test_user_and_articles, test_token):
