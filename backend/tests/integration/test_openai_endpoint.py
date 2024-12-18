@@ -14,7 +14,7 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         self.api_key = os.getenv("OPENAI_API_KEY", "fake_api_key")
 
     @patch('src.llm_client.openai_client.ai.Client')
-    async def test_chat_completion_mock(self, mock_openai_class):
+    def test_chat_completion_mock(self, mock_openai_class):
         """
         測試模擬的 chat completion
         """
@@ -38,7 +38,7 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         
         # 設置模擬客戶端
         mock_completions = MagicMock()
-        mock_completions.create = AsyncMock(return_value=mock_response)
+        mock_completions.create = MagicMock(return_value=mock_response)
         
         mock_chat = MagicMock()
         mock_chat.completions = mock_completions
@@ -52,7 +52,7 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         client = create_openai_client(api_key=self.api_key)
         
         messages = [{"role": "user", "content": "測試訊息"}]
-        response = await client.chat_completion(messages=messages)
+        response = client.chat_completion(messages=messages)
         
         assert response["content"] == "模擬回應"
         assert response["role"] == "assistant"
