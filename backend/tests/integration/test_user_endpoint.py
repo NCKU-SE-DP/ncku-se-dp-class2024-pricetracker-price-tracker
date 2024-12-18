@@ -2,6 +2,13 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker
+import sys
+import os
+
+# 添加測試配置到 Python 路徑
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import settings
+
 from src.main import app
 from src.models import Base, User, session_opener
 from jose import jwt

@@ -1,6 +1,12 @@
-import unittest
 import os
+import sys
 from unittest.mock import patch, AsyncMock, MagicMock
+import unittest
+
+# 添加測試配置到 Python 路徑
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import settings
+
 from src.llm_client.openai_client import create_openai_client
 from src.llm_client.anthropic_client import create_anthropic_client
 
@@ -38,7 +44,7 @@ class TestAISuiteClient(unittest.IsolatedAsyncioTestCase):
             total_tokens=30
         )
         
-        # 設置模擬客戶端
+        # 設置模擬客���端
         mock_completions = MagicMock()
         mock_completions.create = AsyncMock(return_value=mock_response)
         

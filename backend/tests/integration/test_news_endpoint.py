@@ -6,10 +6,15 @@ import json
 from jose import jwt
 from src.main import app
 from src.models import Base, NewsArticle, User, session_opener, user_news_association_table
-from src.news.news import NewsSumaryRequestSchema, PromptRequest
+from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
 from src.auth.auth import pwd_context
 from unittest.mock import Mock
+import sys
+import os
 
+# 添加測試配置到 Python 路徑
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import settings  # 使用測試配置
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
