@@ -9,7 +9,8 @@ from .database import SessionLocal
 from .news.service import process_and_store_relevant_news
 from .news.models import NewsArticle
 from .config import Config
-
+from .exceptions_handler import APIException, InternalServerErrorException
+from .logger import logger
 sentry_init(
     dsn=Config.Setting.SENTRY_DSN,
     traces_sample_rate=Config.Setting.TRACES_SAMPLE_RATE,
@@ -34,15 +35,21 @@ def initialize_news_scheduler():
     :param background_scheduler: 用於執行定時任務的排程器。
     :return: 無返回值
     """
-    db_session = SessionLocal()
     
-    if db_session.query(NewsArticle).count() == 0:
-        process_and_store_relevant_news()
-    db_session.close()
-    
-    # 設置一個每隔 100 分鐘執行一次的定時任務
-    background_scheduler.add_job(process_and_store_relevant_news, "interval", minutes=Config.News.NEWS_FETCH_INTERVAL_TIME)
-    background_scheduler.start()
+    logger.info("Starting the news fetching job")
+    try:
+        db_session = SessionLocal()
+        if db_session.query(NewsArticle).count() == 0:
+            process_and_store_relevant_news()
+        db_session.close()
+        
+        # 設置一個每隔 100 分鐘執行一次的定時任務
+        background_scheduler.add_job(process_and_store_relevant_news, "interval", minutes=Config.News.NEWS_FETCH_INTERVAL_TIME)
+        background_scheduler.start()
+        logger.info("News fetching job started")
+    except Exception as e:
+        logger.error("Failed to start the news fetching job", exc_info=True)
+        raise InternalServerErrorException(e)
 
 @app.on_event("shutdown")
 def shutdown_scheduler():
@@ -51,8 +58,25 @@ def shutdown_scheduler():
     :param background_scheduler: 負責管理定時任務的排程器。
     :return: 無返回值
     """
-    background_scheduler.shutdown()
+    logger.info("Shutting down the news fetching job")
+    try:
+        background_scheduler.shutdown()
+        logger.info("News fetching job stopped")
+    except Exception as e:
+        logger.error("Failed to stop the news fetching job", exc_info=True)
+        raise InternalServerErrorException(e)
 
 app.include_router(user_router, prefix=Config.Setting.FASTAPI_PREFIX)
 app.include_router(news_router, prefix=Config.Setting.FASTAPI_PREFIX)
 app.include_router(pricing_router, prefix=Config.Setting.FASTAPI_PREFIX)
+
+@app.exception_handler(APIException)
+async def api_exception_handler(request, exc):
+    """
+    FastAPI exception handler for APIException.
+    :param request: The incoming request.
+    :param exc: The raised APIException.
+    :return: A JSONResponse containing the exception details.
+    """
+    exc.handle()
+    return exc.to_response()

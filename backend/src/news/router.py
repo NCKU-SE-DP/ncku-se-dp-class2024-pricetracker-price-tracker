@@ -4,10 +4,19 @@ from fastapi import APIRouter, Depends
 from openai import OpenAI
 from ..auth.service import authenticate_user_token
 from ..database import session_opener
-from .models import NewsArticle
+from ..logger import logger
+from ..exceptions_handler import NoResourceFoundException
 from .schemas import PromptRequest, NewsSumaryRequestSchema, NewsSummaryCustomModelRequestSchema
-from .service import openai_client, anthropic_client, article_id_counter, fetch_news_articles, get_article_upvote_details, toggle_article_upvote, process_news_item, convert_news_to_dict
-
+from .service import (
+    openai_client,
+    anthropic_client,
+    article_id_counter,
+    fetch_news_articles,
+    toggle_article_upvote,
+    process_news_item,
+    convert_news_to_dict,
+    fetch_news_with_details
+)
 router = APIRouter(
     prefix="/news",
     tags=["news"],
@@ -25,19 +34,7 @@ def read_user_news(
     :param user: 從 token 獲得的已驗證使用者
     :return: 包含點讚詳情的新聞文章列表
     """
-    news_articles = db_session.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    articles_with_upvotes = []
-
-    for article in news_articles:
-        upvote_count, is_user_upvoted = get_article_upvote_details(article.id, user.id, db_session)
-        articles_with_upvotes.append(
-            {
-                **article.__dict__,
-                "upvotes": upvote_count,
-                "is_upvoted": is_user_upvoted,
-            }
-        )
-    return articles_with_upvotes
+    return fetch_news_with_details(db_session, user_id=user.id)
 
 @router.get("/news")
 def read_news(db_session=Depends(session_opener)):
@@ -46,17 +43,7 @@ def read_news(db_session=Depends(session_opener)):
     :param db_session: 資料庫的 session
     :return: 包含新聞文章及其點贊詳情的列表
     """
-    # 將文章按時間倒序排列
-    news_articles = db_session.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    
-    # 構建返回的結果集，包含每篇文章的點贊數和是否已點贊
-    result = []
-    for article in news_articles:
-        upvotes, is_upvoted = get_article_upvote_details(article.id, None, db_session)
-        result.append(
-            {**article.__dict__, "upvotes": upvotes, "is_upvoted": is_upvoted}
-        )
-    return result
+    return fetch_news_with_details(db_session)
 
 @router.post("/search_news")
 async def search_news(request: PromptRequest):
@@ -75,8 +62,11 @@ async def search_news(request: PromptRequest):
             detailed_news_info = convert_news_to_dict(process_news_item(news_item))
             detailed_news_info["id"] = next(article_id_counter)
             extracted_news_list.append(detailed_news_info)
+            logger.info(f"Search news success: {detailed_news_info['title']}")
         except Exception as error:
-            print(error)
+            logger.error(f"Search news failed: {news_item.url}", error=error)
+    if len(extracted_news_list) == 0:
+        raise NoResourceFoundException()
     return sorted(extracted_news_list, key=lambda x: x["time"], reverse=True)
 
 @router.post("/news_summary")
@@ -124,5 +114,9 @@ def upvote_article(
     :param user: 經由 `authenticate_user_token` 認證的使用者。
     :return: JSON 格式的點讚操作狀態訊息，例如 {"message": "Upvoted"} 或 {"message": "Upvote removed"}。
     """
-    upvote_status_message = toggle_article_upvote(article_id, user.id, db_session)
-    return {"message": upvote_status_message}
+    try:
+        upvote_status_message = toggle_article_upvote(article_id, user.id, db_session)
+        return {"message": upvote_status_message}
+    except Exception as e:
+        logger.error(f"Toggle article failed for article ID: {article_id} and user ID: {user.id}", error=e)
+        raise NoResourceFoundException()

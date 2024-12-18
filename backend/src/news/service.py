@@ -2,9 +2,16 @@ import itertools
 import requests
 import json
 from bs4 import BeautifulSoup
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, insert, delete
-from ..database import Session
+from sqlalchemy.exc import SQLAlchemyError
+from ..exceptions_handler import (
+    ArticleNotFoundException,
+    InternalServerErrorException
+)
+from .models import NewsArticle
+from ..logger import logger
 from ..auth.models import user_news_association_table
 from ..crawler.udn_crawler import UDNCrawler
 from ..crawler.crawler_base import NewsWithSummary
@@ -51,6 +58,34 @@ def add_news_article_to_db(news_article_data):
         news=NewsWithSummary(summary=news_article_data["summary"], reason=news_article_data["reason"]),
         db=session
     )
+
+def fetch_news_with_details(db: Session, user_id: Optional[int] = None) -> list:
+    """
+    Fetch all news articles with their upvote details.
+    :param db: Database session dependency for querying news articles.
+    :param user_id: Optional user ID to fetch user-specific upvote status.
+    :return: A list of news articles with upvote count and user-specific upvote status.
+    """
+    try:
+        news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
+    except SQLAlchemyError as e:
+        logger.error("Failed to fetch news articles from database", exc_info=True)
+        raise InternalServerErrorException(e)
+
+    result = []
+    for article in news:
+        try:
+            upvotes, upvoted = get_article_upvote_details(article.id, user_id, db)
+            result.append(
+                {
+                    **article.__dict__,
+                    "upvotes": upvotes,
+                    "is_upvoted": upvoted,
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to fetch upvote details for article ID: {article.id}", exc_info=True)
+    return result
 
 def fetch_news_articles(search_keyword: str, is_initial=False) -> list:
     """
@@ -109,21 +144,28 @@ def get_article_upvote_details(article_id, user_id, db_session):
     :param db_session: 資料庫的 session
     :return: (點贊總數, 當前使用者是否已點贊)
     """
-    total_upvotes = (
-        db_session.query(user_news_association_table)
-        .filter_by(news_articles_id=article_id)
-        .count()
-    )
-    has_voted = False
-    if user_id:
-        has_voted = (
+    try:
+        if not news_exists(article_id, db_session):
+            logger.error(f"Failed to process article ID: {article_id}")
+            raise ArticleNotFoundException()
+        total_upvotes = (
             db_session.query(user_news_association_table)
-            .filter_by(news_articles_id=article_id, user_id=user_id)
-            .first()
-            is not None
+            .filter_by(news_articles_id=article_id)
+            .count()
         )
-    # :return: (點贊總數, 當前使用者是否已點贊)
-    return total_upvotes, has_voted
+        has_voted = False
+        if user_id:
+            has_voted = (
+                db_session.query(user_news_association_table)
+                .filter_by(news_articles_id=article_id, user_id=user_id)
+                .first()
+                is not None
+            )
+        logger.info(f"Successfully fetched upvote count for article ID: {article_id}")
+        return total_upvotes, has_voted # :return: (點贊總數, 當前使用者是否已點贊)
+    except Exception as e:
+        logger.error(f"Failed to fetch upvote count for article ID: {article_id}", exc_info=True)
+        raise InternalServerErrorException(e)
 
 def toggle_article_upvote(article_id, user_id, db_session):
     """
@@ -133,25 +175,45 @@ def toggle_article_upvote(article_id, user_id, db_session):
     :param db_session: 資料庫會話，用來執行查詢和操作。
     :return: "Upvote removed" 或 "Article upvoted" 字串，表示操作結果。
     """
-    existing_upvote_record = db_session.execute(
-        select(user_news_association_table).where(
-            user_news_association_table.c.news_articles_id == article_id,
-            user_news_association_table.c.user_id == user_id,
-        )
-    ).scalar()
+    try:
+        if not news_exists(article_id, db_session):
+            logger.error(f"Failed to process article ID: {article_id}")
+            raise ArticleNotFoundException()
+        existing_upvote_record = db_session.execute(
+            select(user_news_association_table).where(
+                user_news_association_table.c.news_articles_id == article_id,
+                user_news_association_table.c.user_id == user_id,
+            )
+        ).scalar()
 
-    if existing_upvote_record:
-        delete_upvote = delete(user_news_association_table).where(
-            user_news_association_table.c.news_articles_id == article_id,
-            user_news_association_table.c.user_id == user_id,
-        )
-        db_session.execute(delete_upvote)
-        db_session.commit()
-        return "Upvote removed"
-    else:
-        add_upvote = insert(user_news_association_table).values(
-            news_articles_id=article_id, user_id=user_id
-        )
-        db_session.execute(add_upvote)
-        db_session.commit()
-        return "Article upvoted"
+        if existing_upvote_record:
+            delete_upvote = delete(user_news_association_table).where(
+                user_news_association_table.c.news_articles_id == article_id,
+                user_news_association_table.c.user_id == user_id,
+            )
+            logger.info(f"Upvote removed for article ID: {article_id}")
+            db_session.execute(delete_upvote)
+            db_session.commit()
+            return "Upvote removed"
+        else:
+            add_upvote = insert(user_news_association_table).values(
+                news_articles_id=article_id, user_id=user_id
+            )
+            logger.info(f"Upvote added for article ID: {article_id}")
+            db_session.execute(add_upvote)
+            db_session.commit()
+            return "Article upvoted"
+
+    except Exception as e:
+        logger.error(f"Failed to toggle upvote for article ID: {article_id} and user ID: {user_id}", exc_info=True)
+        raise InternalServerErrorException(e)
+
+def news_exists(article_id, db: Session):
+    try:
+        exists = db.query(NewsArticle).filter_by(id=article_id).first()
+        if not exists:
+            logger.warning(f"Article not found for ID: {article_id}")
+        return exists
+    except SQLAlchemyError as e:
+        logger.error(f"Error processing article ID: {article_id}", exc_info=True)
+        raise InternalServerErrorException(e)

@@ -13,3 +13,13 @@ class User(Base):
         secondary=user_news_association_table,
         back_populates="upvoted_by_users",
     )
+    
+    @staticmethod
+    def validate_username(username: str):
+        if len(username) > Config.Auth.MAX_USERNAME_SIZE:
+            raise ValueError("Username is too long")
+    
+    @staticmethod
+    def validate_password(password: str):
+        if len(password) > Config.Auth.MAX_PASSWORD_SIZE:
+            raise ValueError("Password is too long")

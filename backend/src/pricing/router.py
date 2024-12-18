@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Query
 import requests
-
+from ..logger import logger
+from ..exceptions_handler import (
+    NoResourceFoundException,
+    InternalServerErrorException
+)
 router = APIRouter(
     prefix="/prices",
     tags=["prices"],
@@ -18,7 +22,14 @@ def get_necessities_prices(
     :param commodity: 商品名稱，可選參數，用於篩選特定商品。
     :return: JSON 格式的商品價格資訊，包括商品類別、名稱、價格和地點等細節。
     """
-    return requests.get(
-        "https://opendata.ey.gov.tw/api/ConsumerProtection/NecessitiesPrice",
-        params={"CategoryName": category, "Name": commodity},
-    ).json()
+    try:
+        return requests.get(
+            "https://opendata.ey.gov.tw/api/ConsumerProtection/NecessitiesPrice",
+            params={"CategoryName": category, "Name": commodity},
+        ).json()
+    except ValueError:
+        logger.error("No resource found")
+        raise NoResourceFoundException()
+    except requests.exceptions.RequestException as e:
+        logger.error("Internal server error")
+        raise InternalServerErrorException(e)
