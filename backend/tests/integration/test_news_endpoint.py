@@ -5,7 +5,8 @@ from sqlalchemy.orm import sessionmaker
 import json
 from jose import jwt
 from src.main import app
-from src.models import Base, NewsArticle, User, session_opener, user_news_association_table
+from src.models import Base, NewsArticle, User, user_news_association_table
+from src.database import get_db
 from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
 from src.auth.auth import pwd_context
 from unittest.mock import Mock
@@ -14,7 +15,7 @@ import os
 
 # 添加測試配置到 Python 路徑
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from config import settings  # 使用測試配置
+from config import settings
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
@@ -23,21 +24,19 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
 
-
-def override_session_opener():
+def override_get_db():
     try:
         db = TestingSessionLocal()
         yield db
     finally:
         db.close()
 
-
-app.dependency_overrides[session_opener] = override_session_opener
+app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 @pytest.fixture(scope="module")
 def clear_users():
-    with next(override_session_opener()) as db:
+    with next(override_get_db()) as db:
         db.query(User).delete()
         db.commit()
 
@@ -45,7 +44,7 @@ def clear_users():
 def test_user(clear_users):
     hashed_password = pwd_context.hash("testpassword")
 
-    with next(override_session_opener()) as db:
+    with next(override_get_db()) as db:
         user = User(username="testuser", hashed_password=hashed_password)
         db.add(user)
         db.commit()
@@ -61,7 +60,7 @@ def test_token(test_user):
 
 @pytest.fixture(scope="module")
 def test_articles():
-    with next(override_session_opener()) as db:
+    with next(override_get_db()) as db:
         article_1 = NewsArticle(
             url="https://example.com/test-news-1",
             title="Test News 1",
@@ -114,7 +113,7 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["is_upvoted"] is False
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('news.news.OpenAI')
+    mock_openai_client = mocker.patch('src.news.news.OpenAI')
 
     mock_message = Mock()
     mock_message.content = return_content
@@ -132,11 +131,11 @@ def mock_openai(mocker, return_content):
 def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
-    mock_get_new_info = mocker.patch("news.news.get_new_info", return_value=[
+    mock_get_new_info = mocker.patch("src.news.news.get_new_info", return_value=[
         {"titleLink": "http://example.com/news1"}
     ])
 
-    mock_get = mocker.patch("news.news.requests.get", return_value=mocker.Mock(
+    mock_get = mocker.patch("src.news.news.requests.get", return_value=mocker.Mock(
         text="""
         <html>
         <h1 class="article-content__title">Test Title</h1>

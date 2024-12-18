@@ -10,13 +10,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from config import settings
 
 from src.main import app
-from src.models import Base, User, session_opener
+from src.models import Base, User
+from src.database import session_opener
 from jose import jwt
 from src.auth.auth import pwd_context
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
-# SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
 
@@ -24,14 +24,12 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 Base.metadata.create_all(bind=engine)
 
-
 def override_session_opener():
     try:
         db = TestingSessionLocal()
         yield db
     finally:
         db.close()
-
 
 app.dependency_overrides[session_opener] = override_session_opener
 
