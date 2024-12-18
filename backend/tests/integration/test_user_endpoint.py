@@ -11,7 +11,7 @@ from config import settings
 
 from src.main import app
 from src.models import Base, User
-from src.database import session_opener
+from src.database import get_db
 from jose import jwt
 from src.auth.auth import pwd_context
 
@@ -24,20 +24,20 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 Base.metadata.create_all(bind=engine)
 
-def override_session_opener():
+def override_get_db():
     try:
         db = TestingSessionLocal()
         yield db
     finally:
         db.close()
 
-app.dependency_overrides[session_opener] = override_session_opener
+app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
 @pytest.fixture(scope="module")
 def clear_users():
-    with next(override_session_opener()) as db:
+    with next(override_get_db()) as db:
         db.query(User).delete()
         db.commit()
 
@@ -45,7 +45,7 @@ def clear_users():
 def test_user(clear_users):
     hashed_password = pwd_context.hash("testpassword")
 
-    with next(override_session_opener()) as db:
+    with next(override_get_db()) as db:
         user = User(username="testuser", hashed_password=hashed_password)
         db.add(user)
         db.commit()
