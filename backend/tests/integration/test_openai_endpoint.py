@@ -4,7 +4,7 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from src.llm_client.openai_client import create_openai_client
 
 # 控制是否執行真實 API 測試
-RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"
+RUN_REAL_API_TESTS = "true"
 
 class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

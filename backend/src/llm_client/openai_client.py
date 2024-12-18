@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 import aisuite as ai
 from .base import LLMClientProtocol
-from config import settings
+from src.config import settings
 
 def create_openai_client(api_key: str) -> LLMClientProtocol:
     """
