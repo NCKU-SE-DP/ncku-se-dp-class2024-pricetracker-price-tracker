@@ -121,21 +121,21 @@ def mock_openai(mocker, return_content):
     return mock_openai_client
 
 def test_search_news(mocker):
-    mock_openai(mocker, "keywords")
-
+    mock_openai_client = mocker.patch('src.news.news.openai_client')
+    mock_openai_client.chat_completion = mocker.Mock(return_value="keywords")
+    
     mock_get_new_info = mocker.patch("src.crawler.udn_crawler.get_news_list", return_value=[
         {"title": "Test Title", "url": "http://example.com/news1"}
     ])
-
+    
     mock_get = mocker.patch("src.crawler.udn_crawler.get_article_content", return_value={
         "title": "Test Title",
         "time": "2024-09-10",
         "content": "This is a test paragraph."
     })
 
-    request_body = {"prompt": "Test search prompt"}
-    response = client.post("/api/v1/news/search_news", json=request_body)
-
+    response = client.post("/api/v1/news/search_news", json={"prompt": "Test search prompt"})
+    
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -147,7 +147,9 @@ def test_search_news(mocker):
 def test_news_summary(mocker, test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
     openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
-    mock_openai(mocker, openai_response)
+    
+    mock_openai_client = mocker.patch('src.news.news.openai_client')
+    mock_openai_client.chat_completion = mocker.Mock(return_value=openai_response)
 
     request_body = NewsSummaryRequest(content="Test news content")
     response = client.post("/api/v1/news/news_summary", json=request_body.dict(), headers=headers)
