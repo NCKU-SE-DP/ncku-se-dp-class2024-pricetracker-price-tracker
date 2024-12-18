@@ -13,7 +13,7 @@ from src.main import app
 from src.models import Base, User
 from src.database import get_db
 from jose import jwt
-from src.auth.auth import pwd_context
+from src.auth.models import pwd_context
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
