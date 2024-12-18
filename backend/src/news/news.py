@@ -10,15 +10,15 @@ from typing import List, Optional
 
 
 
-from models import NewsArticle, user_news_association_table, User
-from news.models import get_article_upvote_details
-from news.schemas import NewsResponse, PromptRequest, NewsSummaryRequest
-from database import get_db
-from auth.auth import get_current_user
-from config import settings
-from crawler import udn_crawler
-import llm_client.openai_client as openai_client
-import llm_client.anthropic_client as anthropic_client
+from src.models import NewsArticle, user_news_association_table, User
+from src.news.models import get_article_upvote_details
+from src.news.schemas import NewsResponse, PromptRequest, NewsSummaryRequest
+from src.database import get_db
+from src.auth.auth import get_current_user
+from src.config import settings
+from src.crawler import udn_crawler
+import src.llm_client.openai_client as openai_client
+import src.llm_client.anthropic_client as anthropic_client
 openai_client = openai_client.create_openai_client(settings.OPENAI_API_KEY)
 anthropic_client = anthropic_client.create_anthropic_client(settings.ANTHROPIC_API_KEY)
 router = APIRouter(prefix="/api/v1/news", tags=["news"])
