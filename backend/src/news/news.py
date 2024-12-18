@@ -92,12 +92,12 @@ async def search_news(
     return sorted(news_list, key=lambda x: x["time"], reverse=True)
 
 @router.post("/news_summary")
-async def news_summary(
+def news_summary(
     request: NewsSummaryRequest,
     current_user: User = Depends(get_current_user)
 ):
     """生成新聞摘要"""
-    result = await openai_client.chat_completion(
+    result = openai_client.chat_completion(
         messages=[
             {
                 "role": "system",
