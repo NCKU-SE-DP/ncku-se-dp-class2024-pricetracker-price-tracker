@@ -2,10 +2,10 @@ import json
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from models import NewsArticle, user_news_association_table, User
-from crawler import udn_crawler
-import llm_client.openai_client as openai_client
-from config import settings
+from src.models import NewsArticle, user_news_association_table, User
+from src.crawler import udn_crawler
+import src.llm_client.openai_client as openai_client
+from src.config import settings
 
 ai_client = openai_client.create_openai_client(settings.OPENAI_API_KEY)
 

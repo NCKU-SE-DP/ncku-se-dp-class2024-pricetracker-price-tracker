@@ -1,8 +1,8 @@
 import unittest
 import os
 from unittest.mock import patch, AsyncMock, MagicMock
-from llm_client.openai_client import create_openai_client
-from llm_client.anthropic_client import create_anthropic_client
+from src.llm_client.openai_client import create_openai_client
+from src.llm_client.anthropic_client import create_anthropic_client
 
 # 控制是否執行真實 API 測試
 RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"

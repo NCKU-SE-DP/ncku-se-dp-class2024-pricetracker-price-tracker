@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import unittest
 from unittest.mock import patch, Mock
 import requests
-from src.crawler.udn_crawler import UDNCrawler
+from src.crawler.udn_crawler import get_article_content, get_news_list
 from src.crawler.exceptions import NetworkError, ParseError
 
 class TestBaseCrawlerFunctions(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         mock_get.side_effect = requests.RequestException("Network error")
             
         with self.assertRaises(NetworkError):
-            UDNCrawler.get_news_list(self.test_search_term)
+            get_news_list(self.test_search_term)
 
     @patch('src.crawlers.UDNCrawler.requests.get')
     def test_handle_parse_error(self, mock_get):
@@ -26,7 +26,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         mock_get.return_value = mock_response
             
         with self.assertRaises(ParseError):
-            UDNCrawler.get_article_content(self.test_url)
+            get_article_content(self.test_url)
 
     @patch('src.crawlers.UDNCrawler.requests.get')
     def test_response_validation(self, mock_get):
@@ -37,7 +37,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         mock_response.json.return_value = {"lists": [{"title": "測試", "url": "test_url"}]}
         mock_get.return_value = mock_response
             
-        result = UDNCrawler.get_news_list(self.test_search_term)
+        result = get_news_list(self.test_search_term)
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["title"], "測試")
@@ -45,7 +45,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         # 模擬失敗的回應
         mock_get.side_effect = requests.RequestException("404 Client Error")
         with self.assertRaises(NetworkError):
-            UDNCrawler.get_news_list(self.test_search_term)
+            get_news_list(self.test_search_term)
 
 
     def test_error_message_format(self):
