@@ -29,6 +29,7 @@ def get_news_list(search_term: str, is_initial: bool = False) -> list:
                 all_news_data.extend(response.json()["lists"])
             else:
                 all_news_data.extend(response.json()["lists"])
+
                 
         return all_news_data
         
@@ -38,6 +39,7 @@ def get_news_list(search_term: str, is_initial: bool = False) -> list:
         raise ParseError(f"解析新聞列表失敗: {str(e)}")
 
 def get_article_content(url: str) -> dict:
+
     """獲取文章內容"""
     try:
         response = requests.get(url)
@@ -48,11 +50,13 @@ def get_article_content(url: str) -> dict:
         if not title:
             raise ParseError("找不到文章標題")
         title = title.text.strip()
+
         
         time = soup.find("time", class_="article-content__time")
         if not time:
             raise ParseError("找不到文章時間")
         time = time.text.strip()
+
         
         content_section = soup.find("section", class_="article-content__editor")
         if not content_section:
@@ -60,6 +64,7 @@ def get_article_content(url: str) -> dict:
         
         paragraphs = [
             p.text.strip()
+
             for p in content_section.find_all("p")
             if p.text.strip() != "" and "▪" not in p.text
         ]

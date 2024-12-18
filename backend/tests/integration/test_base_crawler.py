@@ -10,7 +10,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         self.test_url = "https://udn.com/news/story/123456"
         self.test_search_term = "測試"
 
-    @patch('src.crawlers.udn_crawler.requests.get')
+    @patch('src.crawler.udn_crawler.requests.get')
     def test_handle_network_error(self, mock_get):
         """測試網路錯誤處理"""
         mock_get.side_effect = requests.RequestException("Network error")
@@ -38,6 +38,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         mock_get.return_value = mock_response
             
         result = UDNCrawler.get_news_list(self.test_search_term)
+
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["title"], "測試")
             
@@ -45,6 +46,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         mock_get.side_effect = requests.RequestException("404 Client Error")
         with self.assertRaises(NetworkError):
             UDNCrawler.get_news_list(self.test_search_term)
+
 
     def test_error_message_format(self):
         """測試錯誤訊息格式"""

@@ -3,7 +3,6 @@ import aisuite as ai
 from .base import LLMClientProtocol
 from config import settings
 
-
 def create_openai_client(api_key: str) -> LLMClientProtocol:
     """
     建立 OpenAI 客戶端。
@@ -47,6 +46,6 @@ def create_openai_client(api_key: str) -> LLMClientProtocol:
                     }
                 }
             except Exception as e:
-                raise Exception(f"OpenAI 請求失敗: {str(e)}")
+                  raise Exception(f"OpenAI 請求失敗: {str(e)}")
 
     return OpenAIClientImpl()

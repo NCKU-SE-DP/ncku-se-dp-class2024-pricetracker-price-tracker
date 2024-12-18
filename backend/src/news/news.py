@@ -1,11 +1,14 @@
 from datetime import datetime
 import json
+
 import itertools
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 from typing import List, Optional
+
+
 
 from models import NewsArticle, user_news_association_table, User
 from news.models import get_article_upvote_details
@@ -20,7 +23,6 @@ openai_client = openai_client.create_openai_client(settings.OPENAI_API_KEY)
 anthropic_client = anthropic_client.create_anthropic_client(settings.ANTHROPIC_API_KEY)
 router = APIRouter(prefix="/api/v1/news", tags=["news"])
 _id_counter = itertools.count(start=1000000)
-
 
 
 @router.get("/news", response_model=List[NewsResponse])
