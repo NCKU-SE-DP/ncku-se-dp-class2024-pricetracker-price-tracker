@@ -113,7 +113,7 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["is_upvoted"] is False
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('src.news.news.client')
+    mock_openai_client = mocker.patch('src.news.news.openai_client')
 
     mock_message = Mock()
     mock_message.content = return_content
@@ -124,7 +124,10 @@ def mock_openai(mocker, return_content):
     mock_completion = Mock()
     mock_completion.choices = [mock_choice]
 
-    mock_openai_client.chat.completions.create.return_value = mock_completion
+    mock_openai_client.chat_completion.return_value = {
+        "content": return_content,
+        "role": "assistant"
+    }
 
     return mock_openai_client
 
