@@ -14,13 +14,12 @@ from src.news.models import get_new
 # Initialize database
 Base.metadata.create_all(bind=engine)
 
-# Initialize Sentry only if DSN is provided
-if settings.SENTRY_DSN and settings.SENTRY_DSN != "test_sentry_dsn":
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
-    )
+# Initialize Sentry
+sentry_sdk.init(
+    dsn=settings.SENTRY_DSN,
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
 
 app = FastAPI()
 scheduler = BackgroundScheduler()
