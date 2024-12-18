@@ -54,9 +54,9 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         messages = [{"role": "user", "content": "測試訊息"}]
         response = await client.chat_completion(messages=messages)
         
-        self.assertEqual(response["content"], "模擬回應")
-        self.assertEqual(response["role"], "assistant")
-        self.assertEqual(response["usage"]["total_tokens"], 30)
+        assert response["content"] == "模擬回應"
+        assert response["role"] == "assistant"
+        assert response["usage"]["total_tokens"] == 30
 
     @patch('src.llm_client.openai_client.ai.Client')
     async def test_embeddings_mock(self, mock_openai_class):
@@ -152,7 +152,7 @@ class TestOpenAIClient(unittest.IsolatedAsyncioTestCase):
         測試真實的 moderation API 呼叫
         """
         client = create_openai_client(api_key=self.api_key)
-        texts = ["這是���個普通的句子"]
+        texts = ["這是個普通的句子"]
         result = await client.moderation(texts=texts)
         
         self.assertIn("results", result)

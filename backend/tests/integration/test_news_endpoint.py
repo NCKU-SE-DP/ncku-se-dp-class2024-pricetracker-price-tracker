@@ -114,35 +114,24 @@ def test_read_user_news(test_user, test_token, test_articles):
 
 def mock_openai(mocker, return_content):
     mock_openai_client = mocker.patch('src.news.news.openai_client')
-
-    mock_message = Mock()
-    mock_message.content = return_content
-
-    mock_choice = Mock()
-    mock_choice.message = mock_message
-
-    mock_completion = Mock()
-    mock_completion.choices = [mock_choice]
-
     mock_openai_client.chat_completion.return_value = {
         "content": return_content,
         "role": "assistant"
     }
-
     return mock_openai_client
 
 def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
     mock_get_new_info = mocker.patch("src.crawler.udn_crawler.get_news_list", return_value=[
-        {"titleLink": "http://example.com/news1"}
+        {"title": "Test Title", "url": "http://example.com/news1"}
     ])
 
-    mock_get = mocker.patch("src.crawler.udn_crawler.get_article_content", return_value=(
-        "Test Title",
-        "2024-09-10",
-        "This is a test paragraph."
-    ))
+    mock_get = mocker.patch("src.crawler.udn_crawler.get_article_content", return_value={
+        "title": "Test Title",
+        "time": "2024-09-10",
+        "content": "This is a test paragraph."
+    })
 
     request_body = {"prompt": "Test search prompt"}
     response = client.post("/api/v1/news/search_news", json=request_body)

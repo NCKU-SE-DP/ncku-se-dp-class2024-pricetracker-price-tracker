@@ -65,7 +65,7 @@ class TestUDNCrawler(unittest.TestCase):
         
         assert result["title"] == "測試標題"
         assert result["time"] == "2024-01-01 12:00"
-        assert result["content"] == "段落1\n段落2"
+        assert result["content"] == "段落1 段落2"
         
     @patch('src.crawler.udn_crawler.requests.get')
     def test_get_article_content_network_error(self, mock_get):
