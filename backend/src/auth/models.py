@@ -3,9 +3,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt
 from sqlalchemy.orm import Session
-from config import settings
-from models import User
-from database import get_db
+from src.config import settings
+from src.models import User
+from src.database import get_db
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
