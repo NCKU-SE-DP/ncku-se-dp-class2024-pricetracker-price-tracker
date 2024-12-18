@@ -7,7 +7,7 @@ from jose import jwt
 from src.main import app
 from src.models import Base, NewsArticle, User, user_news_association_table
 from src.database import get_db
-from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
+from src.news.schemas import NewsSummaryRequest, PromptRequest
 from src.auth.auth import pwd_context
 from unittest.mock import Mock
 import sys
@@ -165,7 +165,7 @@ def test_news_summary(mocker, test_token):
     openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
     mock_openai(mocker, openai_response)
 
-    request_body = NewsSumaryRequestSchema(content="Test news content")
+    request_body = NewsSummaryRequest(content="Test news content")
     response = client.post("/api/v1/news/news_summary", json=request_body.dict(), headers=headers)
 
     assert response.status_code == 200
