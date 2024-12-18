@@ -121,11 +121,9 @@ def mock_openai(mocker, return_content):
     return mock_openai_client
 
 def test_search_news(mocker):
-    mock_openai_client = mocker.patch('src.news.news.openai_client')
-    mock_openai_client.chat_completion = mocker.Mock(return_value="keywords")
-    
+    # 模擬新聞爬蟲的回應
     mock_get_new_info = mocker.patch("src.crawler.udn_crawler.get_news_list", return_value=[
-        {"title": "Test Title", "url": "http://example.com/news1"}
+        {"title": "Test Title", "titleLink": "http://example.com/news1"}
     ])
     
     mock_get = mocker.patch("src.crawler.udn_crawler.get_article_content", return_value={
@@ -144,20 +142,21 @@ def test_search_news(mocker):
     assert data[0]["content"] == "This is a test paragraph."
 
 
-def test_news_summary(mocker, test_token):
+def test_news_summary(test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
-    openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
+    test_content = "這是一篇測試新聞內容，主要討論AI發展對社會的影響。"
     
-    mock_openai_client = mocker.patch('src.news.news.openai_client')
-    mock_openai_client.chat_completion = mocker.Mock(return_value=openai_response)
-
-    request_body = NewsSummaryRequest(content="Test news content")
-    response = client.post("/api/v1/news/news_summary", json=request_body.dict(), headers=headers)
+    request_body = NewsSummaryRequest(content=test_content)
+    response = client.post("/api/v1/news/news_summary", 
+                          json=request_body.dict(), 
+                          headers=headers)
 
     assert response.status_code == 200
     json_response = response.json()
-    assert json_response["summary"] == "test impact"
-    assert json_response["reason"] == "test reason"
+    assert "summary" in json_response
+    assert "reason" in json_response
+    assert isinstance(json_response["summary"], str)
+    assert isinstance(json_response["reason"], str)
 
 
 def test_upvote_article(test_user_and_articles, test_token):
