@@ -113,7 +113,7 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["is_upvoted"] is False
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('src.news.news.OpenAI')
+    mock_openai_client = mocker.patch('src.news.news.client')
 
     mock_message = Mock()
     mock_message.content = return_content
@@ -124,35 +124,27 @@ def mock_openai(mocker, return_content):
     mock_completion = Mock()
     mock_completion.choices = [mock_choice]
 
-    mock_openai_client.return_value.chat.completions.create.return_value = mock_completion
+    mock_openai_client.chat.completions.create.return_value = mock_completion
 
     return mock_openai_client
 
 def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
-    mock_get_new_info = mocker.patch("src.news.news.get_new_info", return_value=[
+    mock_get_new_info = mocker.patch("src.crawler.udn_crawler.get_news_list", return_value=[
         {"titleLink": "http://example.com/news1"}
     ])
 
-    mock_get = mocker.patch("src.news.news.requests.get", return_value=mocker.Mock(
-        text="""
-        <html>
-        <h1 class="article-content__title">Test Title</h1>
-        <time class="article-content__time">2024-09-10</time>
-        <section class="article-content__editor">
-            <p>This is a test paragraph.</p>
-        </section>
-        </html>
-        """
+    mock_get = mocker.patch("src.crawler.udn_crawler.get_article_content", return_value=(
+        "Test Title",
+        "2024-09-10",
+        "This is a test paragraph."
     ))
 
     request_body = {"prompt": "Test search prompt"}
-
     response = client.post("/api/v1/news/search_news", json=request_body)
 
     assert response.status_code == 200
-
     data = response.json()
     assert len(data) == 1
     assert data[0]["title"] == "Test Title"

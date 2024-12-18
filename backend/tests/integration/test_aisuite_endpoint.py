@@ -21,7 +21,7 @@ class TestAISuiteClient(unittest.IsolatedAsyncioTestCase):
         self.openai_key = os.getenv("OPENAI_API_KEY")
         self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
 
-    @patch('llm_client.openai_client.AsyncOpenAI')
+    @patch('src.llm_client.openai_client.AsyncOpenAI')
     async def test_openai_chat_completion_mock(self, mock_openai_class):
         """
         測試模擬的 OpenAI chat completion
@@ -44,7 +44,7 @@ class TestAISuiteClient(unittest.IsolatedAsyncioTestCase):
             total_tokens=30
         )
         
-        # 設置模擬客���端
+        # 設置模擬客戶端
         mock_completions = MagicMock()
         mock_completions.create = AsyncMock(return_value=mock_response)
         
@@ -66,7 +66,7 @@ class TestAISuiteClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response["role"], "assistant")
         self.assertEqual(response["usage"]["total_tokens"], 30)
 
-    @patch('llm_client.anthropic_client.AsyncAnthropicAPI')
+    @patch('src.llm_client.anthropic_client.AsyncAnthropicAPI')
     async def test_anthropic_chat_completion_mock(self, mock_anthropic_class):
         """
         測試模擬的 Anthropic chat completion

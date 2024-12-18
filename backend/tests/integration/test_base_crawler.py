@@ -18,7 +18,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         with self.assertRaises(NetworkError):
             get_news_list(self.test_search_term)
 
-    @patch('src.crawlers.UDNCrawler.requests.get')
+    @patch('src.crawler.udn_crawler.requests.get')
     def test_handle_parse_error(self, mock_get):
         """測試解析錯誤處理"""
         mock_response = Mock()
@@ -28,7 +28,7 @@ class TestBaseCrawlerFunctions(unittest.TestCase):
         with self.assertRaises(ParseError):
             get_article_content(self.test_url)
 
-    @patch('src.crawlers.UDNCrawler.requests.get')
+    @patch('src.crawler.udn_crawler.requests.get')
     def test_response_validation(self, mock_get):
         """測試回應驗證"""
         # 模擬成功的回應
