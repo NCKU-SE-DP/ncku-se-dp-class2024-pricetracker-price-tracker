@@ -47,5 +47,12 @@ def create_openai_client(api_key: str) -> LLMClientProtocol:
                 }
             except Exception as e:
                   raise Exception(f"OpenAI 請求失敗: {str(e)}")
+        
+        def embeddings(self, input: List[str], model: str = "text-embedding-ada-002") -> List[float]:
+            """
+            使用 OpenAI 的 Embeddings API 生成文本嵌入。
+            """
+            response = client.embeddings.create(input=input, model=model)
+            return response.data[0].embedding
 
     return OpenAIClientImpl()

@@ -3,16 +3,13 @@ from fastapi.testclient import TestClient
 from src.main import app
 from src.config import settings
 import aisuite as ai
+from src.llm_client.openai_client import create_openai_client
+from src.llm_client.anthropic_client import create_anthropic_client
 
 client = TestClient(app)
+openai_client = create_openai_client(settings.OPENAI_API_KEY)
+anthropic_client = create_anthropic_client(settings.ANTHROPIC_API_KEY)
 
-@pytest.fixture
-def openai_client():
-    return ai.Client(api_key=settings.OPENAI_API_KEY)
-
-@pytest.fixture
-def anthropic_client():
-    return ai.Client(api_key=settings.ANTHROPIC_API_KEY)
 
 async def test_openai_chat_completion(openai_client):
     """測試 OpenAI 聊天完成功能"""
@@ -20,7 +17,7 @@ async def test_openai_chat_completion(openai_client):
         {"role": "user", "content": "你好，請用一句話描述今天的天氣"}
     ]
     
-    response = await openai_client.chat.completions.create(
+    response =openai_client.chat_completion(
         model=settings.OPENAI_MODEL,
         messages=messages
     )
@@ -35,7 +32,7 @@ async def test_anthropic_chat_completion(anthropic_client):
         {"role": "user", "content": "你好，請用一句話描述今天的天氣"}
     ]
     
-    response = await anthropic_client.chat.completions.create(
+    response = anthropic_client.chat_completion(
         model=settings.ANTHROPIC_MODEL,
         messages=messages
     )
@@ -57,7 +54,7 @@ async def test_openai_chat_completion_with_system_message(openai_client):
         }
     ]
     
-    response = await openai_client.chat.completions.create(
+    response = openai_client.chat_completion(
         model=settings.OPENAI_MODEL,
         messages=messages,
         temperature=0.7
@@ -72,7 +69,7 @@ async def test_openai_chat_completion_error_handling(openai_client):
     messages = [{"role": "invalid_role", "content": "test"}]
     
     with pytest.raises(Exception):
-        await openai_client.chat.completions.create(
+        openai_client.chat_completion(
             model="invalid_model",
             messages=messages
         )
@@ -82,7 +79,7 @@ async def test_anthropic_chat_completion_error_handling(anthropic_client):
     messages = [{"role": "invalid_role", "content": "test"}]
     
     with pytest.raises(Exception):
-        await anthropic_client.chat.completions.create(
+        anthropic_client.chat_completion(
             model="invalid_model",
             messages=messages
         )
@@ -91,7 +88,7 @@ async def test_openai_embeddings(openai_client):
     """測試 OpenAI 文本嵌入"""
     texts = ["這是一個測試文本"]
     
-    response = await openai_client.embeddings.create(
+    response = openai_client.embeddings(
         model="text-embedding-ada-002",
         input=texts
     )
@@ -111,7 +108,7 @@ async def test_anthropic_streaming(anthropic_client):
         {"role": "user", "content": "請用一句話描述今天的天氣"}
     ]
     
-    stream = await anthropic_client.chat.completions.create(
+    stream = anthropic_client.chat_completion(
         model=settings.ANTHROPIC_MODEL,
         messages=messages,
         stream=True
