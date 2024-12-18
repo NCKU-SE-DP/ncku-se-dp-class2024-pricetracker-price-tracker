@@ -2,14 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sentry_sdk
 from apscheduler.schedulers.background import BackgroundScheduler
-from config import settings
-from database import engine, Base, SessionLocal
-from models import NewsArticle
-from auth.auth import router as auth_router
-from news.news import router as news_router
-from prices.prices import router as prices_router
-from news import news
-from news.models import get_new
+from src.config import settings
+from src.database import engine, Base, SessionLocal
+from src.models import NewsArticle
+from src.auth.auth import router as auth_router
+from src.news.news import router as news_router
+from src.prices.prices import router as prices_router
+from src.news import news
+from src.news.models import get_new
 
 # Initialize database
 Base.metadata.create_all(bind=engine)
