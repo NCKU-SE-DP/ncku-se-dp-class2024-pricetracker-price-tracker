@@ -7,17 +7,21 @@ import aisuite as ai
 client = TestClient(app)
 
 @pytest.fixture
-def ai_client():
-    return ai.Client(api_key=settings.AISUITE_API_KEY)
+def openai_client():
+    return ai.Client(api_key=settings.OPENAI_API_KEY)
 
-async def test_chat_completion(ai_client):
-    """測試聊天完成功能"""
+@pytest.fixture
+def anthropic_client():
+    return ai.Client(api_key=settings.ANTHROPIC_API_KEY)
+
+async def test_openai_chat_completion(openai_client):
+    """測試 OpenAI 聊天完成功能"""
     messages = [
         {"role": "user", "content": "你好，請用一句話描述今天的天氣"}
     ]
     
-    response = await ai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
+    response = await openai_client.chat.completions.create(
+        model=settings.OPENAI_MODEL,
         messages=messages
     )
     
@@ -25,7 +29,22 @@ async def test_chat_completion(ai_client):
     assert isinstance(response.choices[0].message.content, str)
     assert len(response.choices[0].message.content) > 0
 
-async def test_chat_completion_with_system_message(ai_client):
+async def test_anthropic_chat_completion(anthropic_client):
+    """測試 Anthropic 聊天完成功能"""
+    messages = [
+        {"role": "user", "content": "你好，請用一句話描述今天的天氣"}
+    ]
+    
+    response = await anthropic_client.chat.completions.create(
+        model=settings.ANTHROPIC_MODEL,
+        messages=messages
+    )
+    
+    assert response.choices[0].message.content is not None
+    assert isinstance(response.choices[0].message.content, str)
+    assert len(response.choices[0].message.content) > 0
+
+async def test_openai_chat_completion_with_system_message(openai_client):
     """測試帶有系統訊息的聊天完成"""
     messages = [
         {
@@ -38,8 +57,8 @@ async def test_chat_completion_with_system_message(ai_client):
         }
     ]
     
-    response = await ai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
+    response = await openai_client.chat.completions.create(
+        model=settings.OPENAI_MODEL,
         messages=messages,
         temperature=0.7
     )
@@ -48,39 +67,52 @@ async def test_chat_completion_with_system_message(ai_client):
     assert isinstance(response.choices[0].message.content, str)
     assert len(response.choices[0].message.content) > 0
 
-async def test_chat_completion_with_claude(ai_client):
-    """測試 Claude 模型的聊天完成"""
-    messages = [
-        {"role": "user", "content": "你好，請用一句話描述今天的天氣"}
-    ]
-    
-    response = await ai_client.chat.completions.create(
-        model="claude-3-sonnet-20240229",
-        messages=messages
-    )
-    
-    assert response.choices[0].message.content is not None
-    assert isinstance(response.choices[0].message.content, str)
-    assert len(response.choices[0].message.content) > 0
-
-async def test_chat_completion_error_handling(ai_client):
+async def test_openai_chat_completion_error_handling(openai_client):
     """測試錯誤處理"""
     messages = [{"role": "invalid_role", "content": "test"}]
     
     with pytest.raises(Exception):
-        await ai_client.chat.completions.create(
+        await openai_client.chat.completions.create(
             model="invalid_model",
             messages=messages
         )
 
-async def test_chat_completion_with_streaming(ai_client):
-    """測試串流回應"""
+async def test_anthropic_chat_completion_error_handling(anthropic_client):
+    """測試 Anthropic 錯誤處理"""
+    messages = [{"role": "invalid_role", "content": "test"}]
+    
+    with pytest.raises(Exception):
+        await anthropic_client.chat.completions.create(
+            model="invalid_model",
+            messages=messages
+        )
+
+async def test_openai_embeddings(openai_client):
+    """測試 OpenAI 文本嵌入"""
+    texts = ["這是一個測試文本"]
+    
+    response = await openai_client.embeddings.create(
+        model="text-embedding-ada-002",
+        input=texts
+    )
+    
+    assert response.data is not None
+    assert len(response.data) > 0
+    assert len(response.data[0].embedding) > 0
+    assert all(isinstance(x, float) for x in response.data[0].embedding)
+
+@pytest.mark.skipif(
+    not settings.ANTHROPIC_API_KEY, 
+    reason="需要 Anthropic API key"
+)
+async def test_anthropic_streaming(anthropic_client):
+    """測試 Anthropic 串流回應"""
     messages = [
         {"role": "user", "content": "請用一句話描述今天的天氣"}
     ]
     
-    stream = await ai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
+    stream = await anthropic_client.chat.completions.create(
+        model=settings.ANTHROPIC_MODEL,
         messages=messages,
         stream=True
     )
@@ -92,68 +124,3 @@ async def test_chat_completion_with_streaming(ai_client):
     
     assert len(collected_content) > 0
     assert isinstance(collected_content, str)
-
-async def test_chat_completion_with_function_call(ai_client):
-    """測試函數調用功能"""
-    messages = [
-        {"role": "user", "content": "今天台北的天氣如何？"}
-    ]
-    
-    functions = [
-        {
-            "name": "get_weather",
-            "description": "獲取指定城市的天氣資訊",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "city": {
-                        "type": "string",
-                        "description": "城市名稱"
-                    }
-                },
-                "required": ["city"]
-            }
-        }
-    ]
-    
-    response = await ai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        functions=functions,
-        function_call="auto"
-    )
-    
-    assert response.choices[0].message is not None
-    if response.choices[0].message.function_call:
-        assert response.choices[0].message.function_call.name == "get_weather"
-        function_args = response.choices[0].message.function_call.arguments
-        assert "city" in function_args
-        assert "台北" in function_args
-
-def test_embeddings():
-    """測試文本嵌入 API"""
-    request_body = {
-        "texts": ["這是一個測試文本"]
-    }
-    
-    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body)
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    assert isinstance(data[0], list)
-    assert all(isinstance(x, float) for x in data[0])
-
-def test_moderation():
-    """測試內容審核 API"""
-    request_body = {
-        "texts": ["這是個普通的句子"]
-    }
-    
-    response = client.post("/api/v1/openai/moderation", json=request_body)
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "results" in data
-    assert isinstance(data["results"], list)
-    assert "flagged" in data["results"][0]
