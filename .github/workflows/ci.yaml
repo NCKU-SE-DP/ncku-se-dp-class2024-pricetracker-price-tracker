@@ -7,7 +7,13 @@ on:
       - 'develop'
       - 'fix/integration-test'
       - 'refactor/crawler-oop-implementation'
+      - 'refactor/llm-client-template-methods-pattern'
       - 'refactor/llm_client'
+
+  pull_request:
+    branches:
+      - 'main'
+      - 'develop'
 
 jobs:
   test:
@@ -38,7 +44,8 @@ jobs:
 
       - name: Run integration tests (with mock DB)
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          openai: ${{ secrets.OPENAI }}
+          claude: ${{ secrets.CLAUDE }}
         run: |
           cd backend
           pytest tests/integration --cov=src --cov-report=xml --disable-warnings

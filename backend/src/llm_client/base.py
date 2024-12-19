@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
-from .exception import DomainMismatchException
 from pydantic import BaseModel, Field
+import aisuite as ai
+client = ai.Client()
+
+models = ["openai:gpt-3.5-turbo", "anthropic:claude-3-5-sonnet-20240620"]
+
 
 class MessagePassingInterfaceExample(BaseModel):
     key: str = Field(
@@ -30,32 +34,5 @@ class LLMClient(ABC):
         :param prompt: The prompt message.
         :param kwargs: Additional optional parameters (e.g., temperature, max tokens).
         :return: The response content (dictionary format).
-        """
-        return NotImplemented
-
-    def validate_key(self):
-        
-        if not self.api_key:
-            raise ValueError("API key is not provided.")
-
-    @abstractmethod
-    def extract_keywords(self, content: str, prompt: MessageInterface) -> dict:
-        """
-        Abstract method for extracting keywords from the given content.
-        Concrete implementations need to be provided in subclasses.
-        :param content: The content to extract keywords from.
-        :param prompt: The prompt to use for keyword extraction.
-        :return: The extracted keywords.
-        """
-        return NotImplemented
-
-    @abstractmethod
-    def generate_summary(self, content: str, prompt: MessageInterface) -> dict:
-        """
-        Abstract method for generating a summary.
-        Concrete implementations need to be provided in subclasses.
-        :param content: The content to generate a summary for.
-        :param prompt: The prompt to use for generating the summary.
-        :return: The generated summary.
         """
         return NotImplemented

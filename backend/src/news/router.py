@@ -5,11 +5,12 @@ from bs4 import BeautifulSoup
 import requests
 import itertools
 
-from .schemas import NewsSumaryRequestSchema, PromptRequest
-from .utils import get_new_info, toggle_upvote, get_article_upvote_details
+from .schemas import NewsSumaryRequestSchema, PromptRequest, NewsSumaryCustomModelSchema
+from .utils import get_new_info, toggle_upvote, get_article_upvote_details, openai_client, anthropic_client
 from ..auth.database import session_opener, authenticate_user_token
 from ..models import NewsArticle
 from .service import extract_search_keywords, generate_summary
+
 
 _id_counter = itertools.count(start=1000000)
 
@@ -125,3 +126,22 @@ def read_news(db=Depends(session_opener)):
         )
     return result
 
+@router.post("/news_summary_custom_model")
+async def news_summary_with_custom_model(
+        payload: NewsSumaryCustomModelSchema, user=Depends(authenticate_user_token)
+):
+    response = {}
+
+    if not payload.ai_model:
+        return {"message": "Model is required."}
+    elif payload.ai_model.lower() == "openai":
+        result = openai_client.generate_summary(payload.content)
+    elif payload.ai_model.lower() == "anthropic" or payload.ai_model.lower() == "claude":
+        result = anthropic_client.generate_summary(payload.content)
+    else:
+        return {"message": "Invalid model."}
+
+    if result:
+        response["summary"] = result["影響"]
+        response["reason"] = result["原因"]
+    return response

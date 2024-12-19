@@ -5,11 +5,16 @@ from src.models import user_news_association_table, NewsArticle
 from openai import OpenAI
 from src.auth.database import SessionLocal
 from src.crawler.udn_crawler import UDNCrawler
-from src.llm_client.openai_client import OpenAIClient
-from src.llm_client.base import MessageInterface
+
+from src.llm_client.client import AnthropicClient, OpenAIClient
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 crawler = UDNCrawler()
-llm_client = OpenAIClient(api_key="xxx")
+openai_client = OpenAIClient(api_key=os.getenv("openai"))
+anthropic_client = AnthropicClient(api_key=os.getenv("claude"))
 
 
 def store_news(news_data):
