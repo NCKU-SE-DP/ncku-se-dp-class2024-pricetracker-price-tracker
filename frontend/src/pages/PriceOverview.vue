@@ -62,6 +62,16 @@ export default {
     height: calc(100% - 4.5em);
     box-sizing: border-box;
 }
+@media (max-width: 768px) {
+    .wrapper {
+        padding: 1em;
+    }
+}
+@media (max-width: 768px) {
+    .wrapper h1{
+        padding-top: 1em;
+    }
+}
 .prices{
     display: flex;
     justify-content: space-around;

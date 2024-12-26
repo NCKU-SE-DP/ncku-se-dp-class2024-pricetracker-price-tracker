@@ -81,11 +81,27 @@ export default {
     box-sizing: border-box;
     width: 100%;
 }
+@media (max-width: 768px) {
+    .wrapper {
+        padding: 1em;
+    }
+}
+@media (max-width: 768px) {
+    .wrapper h1{
+        text-align: center;
+        padding-top: 1em;
+    }
+}
 .content {
     background-color: white;
     margin-top: 1em;
     border-radius: 1em;
     padding: 1em 3em;
+}
+@media (max-width: 768px) {
+    .content {
+        padding: 0.5em;
+    }
 }
 .news-item{
     border-bottom: #aaaaaa 1px solid;
@@ -103,7 +119,9 @@ export default {
     padding: 1em;
     width: 80%;
 }
-
+.class h1{
+    padding-top: 1em;
+}
 .search-bar input{
     border: none;
     outline: none;

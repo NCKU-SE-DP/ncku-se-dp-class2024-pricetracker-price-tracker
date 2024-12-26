@@ -1,0 +1,1 @@
+2024-12-18 16:32:52,152 - logger - ERROR - Failed to login: 'NoneType' object has no attribute 'hashed_password'

@@ -28,6 +28,6 @@ export default {
   top: 0;
 }
 .render{
-  margin-top: 4.5em;
+  margin-top: 2em;
 }
 </style>

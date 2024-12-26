@@ -8,7 +8,14 @@
             <li v-if="!isLoggedIn"><RouterLink to="/login">登入</RouterLink></li>
             <li v-else @click="logout">Hi, {{getUserName}}! 登出</li>
         </ul>
+        <div class="menu-icon" @click="toggleMenu">☰</div>
     </nav>
+    <div class="mobile-menu" :class="{ active: menuActive }">
+        <RouterLink to="/overview">物價概覽</RouterLink>
+        <RouterLink to="/trending">物價趨勢</RouterLink>
+        <RouterLink to="/news">相關新聞</RouterLink>
+        <RouterLink to="/login">登入</RouterLink>
+    </div>
 </template>
 
 <script>
@@ -16,6 +23,11 @@ import { useAuthStore } from '@/stores/auth';
 
 export default {
     name: 'NavBar',
+    data() {
+        return {
+            menuActive: false
+        };
+    },
     computed: {
         isLoggedIn(){
             const userStore = useAuthStore();
@@ -27,6 +39,9 @@ export default {
         }
     },
     methods: {
+        toggleMenu() {
+            this.menuActive = !this.menuActive; 
+        },
         logout(){
             const userStore = useAuthStore();
             userStore.logout();
@@ -74,5 +89,42 @@ export default {
     text-decoration: none;
     color: #575B5D;
 }
+
+.mobile-menu {
+    padding-top: 80px;
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    background-color: #f4f4f4;
+}
+
+.navbar .menu-icon {
+    display: none;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+.mobile-menu a {
+    padding: 10px;
+    text-decoration: none;
+    color: black;
+    display: block;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .navbar ul {
+        display: none;
+    }
+
+    .navbar .menu-icon {
+        display: block;
+    }
+
+    .mobile-menu.active {
+        display: flex;
+    }
+}
+
 
 </style>

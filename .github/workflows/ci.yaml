@@ -4,13 +4,23 @@ on:
   push:
     branches:
       - 'main'
+      - 'develop'
+      - 'fix/integration-test'
+      - 'refactor/crawler-oop-implementation'
+      - 'refactor/llm_client'
+      - 'refactor/error_handling'
+      - 'refactor/improve_code'
+
   pull_request:
     branches:
       - 'main'
+      - 'develop'
+      - 'refactor/error_handling'
+      - 'refactor/improve_code'
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [F74136819]
 
     steps:
       - name: Checkout code
@@ -20,6 +30,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
+
 
       - name: Install dependencies
         run: |
@@ -36,7 +47,8 @@ jobs:
 
       - name: Run integration tests (with mock DB)
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          openai: ${{ secrets.OPENAI }}
+          claude: ${{ secrets.CLAUDE }}
         run: |
           cd backend
           pytest tests/integration --cov=src --cov-report=xml --disable-warnings

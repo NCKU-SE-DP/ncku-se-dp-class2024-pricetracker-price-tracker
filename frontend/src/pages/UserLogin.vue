@@ -42,7 +42,7 @@ export default {
 
 <style scoped>
 .login-page {
-    padding: 3em 5em;
+    padding: 3em 3em;
     background: #f3f3f3;
     min-height: calc(100vh - 4.5em);
     height: calc(100% - 4.5em);
@@ -81,7 +81,7 @@ form > input{
 }
 
 .ops > button{
-    padding: .5em 1em;
+    padding: .5em 0.5em;
     margin: 0 .5em;
     font-size: 1.2em;
     border: none;

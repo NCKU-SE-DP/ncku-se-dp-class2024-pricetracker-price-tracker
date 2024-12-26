@@ -50,7 +50,7 @@ export default {
     background: white;
     padding: 20px;
     border-radius: 8px;
-    padding: 3em 4em;
+    padding: 1em 0em;
 }
 .content{
     overflow-y: auto;
@@ -67,7 +67,7 @@ export default {
 }
 .news-dialog p{
     font-size: 1.2em;
-    margin: 1em 0;
+    margin: 0.5em 0;
 }
 .cover{
     width: 100%;

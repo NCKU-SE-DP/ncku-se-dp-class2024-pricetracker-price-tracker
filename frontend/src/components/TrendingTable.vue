@@ -95,6 +95,7 @@ export default {
 <style scoped>
 .trending-table {
     margin-top: 2em;
+    overflow-x: auto;
 }
 
 table {

@@ -3,7 +3,6 @@
         <h1>物價趨勢</h1>
         <div class="content">
             <div class="selects">
-
                 <select v-model="selectedCategory">
                     <option disabled value="">請選擇商品類別</option>
                     <option v-for="category in categoryKeys" :key="category" :value="category">{{
@@ -77,26 +76,30 @@ export default {
 
 <style scoped>
 .wrapper {
-    padding: 3em 5em;
+    padding: 3em 0.3em;
     background: #f3f3f3;
     min-height: calc(100vh - 4.5em);
     height: calc(100% - 4.5em);
     box-sizing: border-box;
     width: 100%;
 }
-
+@media (max-width: 768px) {
+    .wrapper h1 {
+        text-align: center;
+    }
+}
 .content {
     margin-top: 2em;
     background-color: #fff;
     border-radius: 1em;
-    padding: 2em;
+    padding: 2em 1em;
     width: 100%;
 }
 
-
 .selects {
     display: flex;
-    justify-content: flex-start;
+    flex-direction: column;
+    margin-top: 1em;
 }
 
 .selects>select {
