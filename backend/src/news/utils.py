@@ -5,8 +5,10 @@ from src.models import user_news_association_table, NewsArticle
 from openai import OpenAI
 from src.auth.database import SessionLocal
 from src.crawler.udn_crawler import UDNCrawler
-
 from src.llm_client.client import AnthropicClient, OpenAIClient
+from src.config import OpenAIConfig
+from src.news.prompt import Prompt
+
 from dotenv import load_dotenv
 import os
 
@@ -94,12 +96,12 @@ def get_new(fetch_all_pages=False):
         messages = [
             {
                 "role": "system",
-                "content": "你是一個關聯度評估機器人，請評估新聞標題是否與「民生用品的價格變化」相關，並給予'high'、'medium'、'low'評價。(僅需回答'high'、'medium'、'low'三個詞之一)",
+                "content": Prompt.RELEVANCE_CHECK_PROMPT,
             },
             {"role": "user", "content": f"{news_title}"},
         ]
         ai_response = OpenAI(api_key="xxx").chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=OpenAIConfig.MODEL_NAME,
             messages=messages,
         )
 
@@ -113,13 +115,13 @@ def get_new(fetch_all_pages=False):
             summary_messages = [
                 {
                     "role": "system",
-                    "content": "你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 (影響、原因各50個字，請以json格式回答 {'影響': '...', '原因': '...'})",
+                    "content": Prompt.GENERATE_SUMMARY_PROMPT,
                 },
                 {"role": "user", "content": " ".join(detailed_news["content"])},
             ]
 
             completion = OpenAI(api_key="xxx").chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=OpenAIConfig.MODEL_NAME,
                 messages=summary_messages,
             )
             result = completion.choices[0].message.content

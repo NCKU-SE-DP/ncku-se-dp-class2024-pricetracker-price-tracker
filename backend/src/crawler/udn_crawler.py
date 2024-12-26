@@ -59,7 +59,8 @@ class UDNCrawler(NewsCrawlerBase):
         """
         return self.get_headline(search_term, page=(1, 10))
 
-    def get_headline(
+    def get_headlines(
+
         self, search_term: str, page: int | tuple[int, int]
     ) -> list[Headline]:
 
@@ -67,7 +68,8 @@ class UDNCrawler(NewsCrawlerBase):
         # If 'page' is a tuple, unpack it and create a range representing those pages (inclusive).
         # If 'page' is an int, create a list containing only that single page number.
         # page_range = range(*page) if isinstance(page, tuple) else [page]
-        page_range = range(*page) if isinstance(page, tuple) else [page]
+        page_range = range(page[0], page[1] + 1) if isinstance(page, tuple) else [page]
+
 
         headlines = []
 
@@ -75,7 +77,10 @@ class UDNCrawler(NewsCrawlerBase):
             news = self._fetch_news(page_num, search_term)
             headlines.extend(news)
 
-    def _fetch_news(self, page: int, search_term: str) -> list[Headline]:
+        return headlines
+
+    def _fetch_headlines(self, page: int, search_term: str) -> list[Headline]:
+
         params = self._create_search_params(page, search_term)
         response = self._perform_request(params=params)
         return self._parse_headlines(response)
@@ -110,7 +115,8 @@ class UDNCrawler(NewsCrawlerBase):
 
         return headlines
 
-    def parse(self, url: str) -> News:
+    def _parse(self, url: str) -> News:
+
         
         response = self._perform_request(url=url)
         soup = BeautifulSoup(response.text, "html.parser")

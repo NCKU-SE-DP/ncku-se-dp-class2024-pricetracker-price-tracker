@@ -12,3 +12,5 @@ class AppConfig:
     CORS_ALLOW_METHODS = ["*"]
     CORS_ALLOW_HEADERS = ["*"]
     INTERVAL_MINUTES = 30
+class OpenAIConfig:
+    MODEL_NAME = "gpt-3.5-turbo"

@@ -5,7 +5,6 @@ client = ai.Client()
 
 models = ["openai:gpt-3.5-turbo", "anthropic:claude-3-5-sonnet-20240620"]
 
-
 class MessagePassingInterfaceExample(BaseModel):
     key: str = Field(
         default=...,

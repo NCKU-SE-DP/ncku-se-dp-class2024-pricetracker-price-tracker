@@ -9,11 +9,14 @@ on:
       - 'refactor/crawler-oop-implementation'
       - 'refactor/llm_client'
       - 'refactor/error_handling'
+      - 'refactor/improve_code'
+
   pull_request:
     branches:
       - 'main'
       - 'develop'
       - 'refactor/error_handling'
+      - 'refactor/improve_code'
 
 jobs:
   test:

@@ -13,7 +13,6 @@ from .service import extract_search_keywords, generate_summary
 from ..logger.logger import logger
 
 
-
 _id_counter = itertools.count(start=1000000)
 
 router = APIRouter(
@@ -64,10 +63,10 @@ def read_news(db=Depends(session_opener)):
     news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
     result = []
     try:
-        for n in news:
-            upvotes, upvoted = get_article_upvote_details(n.id, None, db)
+        for article in news:
+            upvotes, upvoted = get_article_upvote_details(article.id, None, db)
             result.append(
-                {**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
+                {**article.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
             )
         return result
     except Exception as e:
@@ -169,7 +168,7 @@ async def news_summary_with_custom_model(
         logger.error(f"Error processing article: {str(e)}")
         raise HTTPException(status_code=500, detail="Error processing article")
 
+
 @router.get("/sentry-debug")
 async def trigger_error():
     division_by_zero = 1 / 0
-
