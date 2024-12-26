@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 import json
 from openai import OpenAI
 from bs4 import BeautifulSoup
@@ -10,6 +10,8 @@ from .utils import get_new_info, toggle_upvote, get_article_upvote_details, open
 from ..auth.database import session_opener, authenticate_user_token
 from ..models import NewsArticle
 from .service import extract_search_keywords, generate_summary
+from ..logger.logger import logger
+
 
 
 _id_counter = itertools.count(start=1000000)
@@ -34,18 +36,43 @@ def read_user_news(
     :param u: Authenticated user
     :return: List of news articles with their upvote status
     """
+    try:
+        news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
+        result = []
+        for article in news:
+            upvotes, upvoted = get_article_upvote_details(article.id, u.id, db)
+            result.append(
+                {
+                    **article.__dict__,
+                    "upvotes": upvotes,
+                    "is_upvoted": upvoted,
+                }
+            )
+        return result
+    except Exception as e:
+        logger.error(f"Failed to fetch news from the database: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get upvote count")
+
+@router.get("/news")
+def read_news(db=Depends(session_opener)):
+    """
+    Read news
+
+    :param db: Database session
+    :return: List of news articles with their upvote status
+    """
     news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
     result = []
-    for article in news:
-        upvotes, upvoted = get_article_upvote_details(article.id, u.id, db)
-        result.append(
-            {
-                **article.__dict__,
-                "upvotes": upvotes,
-                "is_upvoted": upvoted,
-            }
-        )
-    return result
+    try:
+        for n in news:
+            upvotes, upvoted = get_article_upvote_details(n.id, None, db)
+            result.append(
+                {**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
+            )
+        return result
+    except Exception as e:
+        logger.error(f"Failed to fetch news from the database: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch news from the database")
 
 @router.post("/search_news")
 async def search_news(request: PromptRequest):
@@ -76,7 +103,8 @@ async def search_news(request: PromptRequest):
             parsed_news["id"] = next(_id_counter)
             news_list.append(parsed_news)
         except Exception as e:
-            print(e)
+            logger.error(f"Error processing article: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error processing article")
     return sorted(news_list, key=lambda x: x["time"], reverse=True)
 
 
@@ -86,11 +114,15 @@ async def news_summary(
 ):
     response = {}
     result = generate_summary(payload.content)
-    if result:
-        result = json.loads(result)
-        response["summary"] = result["影響"]
-        response["reason"] = result["原因"]
-    return response
+    try:
+        if result:
+            result = json.loads(result)
+            response["summary"] = result["影響"]
+            response["reason"] = result["原因"]
+        return response
+    except Exception as e:
+        logger.error(f"Error processing article: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing article")
 
 @router.post("/{id}/upvote")
 def upvote_article(
@@ -106,42 +138,38 @@ def upvote_article(
     :param u: Authenticated user
     :return: Dictionary containing the operation message
     """
-    message = toggle_upvote(id, u.id, db)
-    return {"message": message}
+    try:
+        message = toggle_upvote(id, u.id, db)
+        return {"message": message}
+    except Exception as e:
+        logger.error(f"Failed to toggle article: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to toggle article")
 
-@router.get("/news")
-def read_news(db=Depends(session_opener)):
-    """
-    Read news
-
-    :param db: Database session
-    :return: List of news articles with their upvote status
-    """
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    for n in news:
-        upvotes, upvoted = get_article_upvote_details(n.id, None, db)
-        result.append(
-            {**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
-        )
-    return result
 
 @router.post("/news_summary_custom_model")
 async def news_summary_with_custom_model(
         payload: NewsSumaryCustomModelSchema, user=Depends(authenticate_user_token)
 ):
     response = {}
+    try:    
+        if not payload.ai_model:
+            return {"message": "Model is required."}
+        elif payload.ai_model.lower() == "openai":
+            result = openai_client.generate_summary(payload.content)
+        elif payload.ai_model.lower() == "anthropic" or payload.ai_model.lower() == "claude":
+            result = anthropic_client.generate_summary(payload.content)
+        else:
+            return {"message": "Invalid model."}
 
-    if not payload.ai_model:
-        return {"message": "Model is required."}
-    elif payload.ai_model.lower() == "openai":
-        result = openai_client.generate_summary(payload.content)
-    elif payload.ai_model.lower() == "anthropic" or payload.ai_model.lower() == "claude":
-        result = anthropic_client.generate_summary(payload.content)
-    else:
-        return {"message": "Invalid model."}
+        if result:
+            response["summary"] = result["影響"]
+            response["reason"] = result["原因"]
+        return response
+    except Exception as e:
+        logger.error(f"Error processing article: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing article")
 
-    if result:
-        response["summary"] = result["影響"]
-        response["reason"] = result["原因"]
-    return response
+@router.get("/sentry-debug")
+async def trigger_error():
+    division_by_zero = 1 / 0
+

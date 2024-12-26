@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
+from ..logger.logger import logger
 import requests
+
 
 router = APIRouter(
     prefix="/prices",
@@ -21,7 +23,11 @@ def get_necessities_prices(
     :return: JSON response containing the prices of necessities.
     :rtype: dict
     """
-    return requests.get(
-        "https://opendata.ey.gov.tw/api/ConsumerProtection/NecessitiesPrice",
-        params={"CategoryName": category, "Name": commodity},
-    ).json()
+    try:
+        return requests.get(
+            "https://opendata.ey.gov.tw/api/ConsumerProtection/NecessitiesPrice",
+            params={"CategoryName": category, "Name": commodity},
+        ).json()
+    except Exception as e: 
+        logger.error(f"Failed to get necessities prices: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get necessities prices")

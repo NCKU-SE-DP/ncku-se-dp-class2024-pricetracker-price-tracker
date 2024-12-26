@@ -16,7 +16,6 @@ crawler = UDNCrawler()
 openai_client = OpenAIClient(api_key=os.getenv("openai"))
 anthropic_client = AnthropicClient(api_key=os.getenv("claude"))
 
-
 def store_news(news_data):
     """
     Add a news article to the database.
@@ -42,7 +41,6 @@ def get_new_info(search_term, fetch_all_pages=False):
 
     headlines = crawler.get_headline(search_term, page=(1, 10) if fetch_all_pages else 1)
     return [headline.dict() for headline in headlines]
-
 
 
 def toggle_upvote(n_id, u_id, db):

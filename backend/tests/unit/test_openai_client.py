@@ -2,7 +2,8 @@ import unittest
 import os
 from unittest.mock import patch
 from src.llm_client.base import MessagePassingInterface
-from src.llm_client.openai_client import OpenAIClient
+from backend.src.llm_client.client import OpenAIClient
+
 from src.config import Config
 # 除非確認要使用真實的API進行測試(當然會因此擁有額外的開銷)，否則將RUN_REAL_API_TESTS設置為False
 RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"

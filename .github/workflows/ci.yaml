@@ -7,13 +7,13 @@ on:
       - 'develop'
       - 'fix/integration-test'
       - 'refactor/crawler-oop-implementation'
-      - 'refactor/llm-client-template-methods-pattern'
       - 'refactor/llm_client'
-
+      - 'refactor/error_handling'
   pull_request:
     branches:
       - 'main'
       - 'develop'
+      - 'refactor/error_handling'
 
 jobs:
   test:

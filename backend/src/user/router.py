@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from ..models import User
 from .schemas import UserAuthSchema
 from ..auth.database import authenticate_user_token
 from ..config import AppConfig
+from ..logger.logger import logger
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(
@@ -32,11 +33,17 @@ async def login_for_access_token(
     :return: JSON response containing the prices of necessities.
     :rtype: dict
     """
-    user = check_user_password_is_correct(db, form_data.username, form_data.password)
-    access_token = create_access_token(
-        data={"sub": str(user.username)}, expires_delta=timedelta(minutes=AppConfig.INTERVAL_MINUTES)
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        user = check_user_password_is_correct(db, form_data.username, form_data.password)
+        if not user:
+            logger.warning(f"Failed to login: Invalid credentials")
+        access_token = create_access_token(
+            data={"sub": str(user.username)}, expires_delta=timedelta(minutes=AppConfig.INTERVAL_MINUTES)
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        logger.error(f"Failed to login: {str(e)}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @router.post("/register")
 def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
@@ -51,11 +58,16 @@ def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
     :rtype: User
     """
     hashed_password = pwd_context.hash(user.password)
-    db_user = User(username=user.username, hashed_password=hashed_password)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        db_user = User(username=user.username, hashed_password=hashed_password)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to register user: {str(e)}")
+        raise HTTPException(status_code=500, detail="User registration failed")
 
 @router.get("/me")
 def read_users_me(user=Depends(authenticate_user_token)):
@@ -67,4 +79,8 @@ def read_users_me(user=Depends(authenticate_user_token)):
     :return: A dictionary containing the username of the authenticated user.
     :rtype: dict
     """
-    return {"username": user.username}
+    try:
+        return {"username": user.username}
+    except Exception as e:
+        logger.error(f"Failed to get user: {str(e)}")
+        raise HTTPException(status_code=404, detail="User not found")
